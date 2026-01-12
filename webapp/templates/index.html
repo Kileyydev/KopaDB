@@ -1,0 +1,14 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>KopaDB Demo</title>
+</head>
+<body>
+    <h1>Transactions</h1>
+    <ul>
+        {% for row in rows %}
+            <li>ID: {{ row.id }}, Amount: {{ row.amount }}</li>
+        {% endfor %}
+    </ul>
+</body>
+</html>

@@ -1,0 +1,16 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Register Merchant</title>
+</head>
+<body>
+<h1>Register Merchant</h1>
+<form method="post">
+    <label>Name:</label><input name="name" required><br>
+    <label>Email:</label><input name="email" type="email" required><br>
+    <label>Balance (≥ 1,000,000 USD):</label><input name="balance" type="number"><br>
+    <button type="submit">Register Merchant</button>
+</form>
+<a href="{{ url_for('index') }}">Back to Dashboard</a>
+</body>
+</html>
