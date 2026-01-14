@@ -1,0 +1,177 @@
+<!DOCTYPE html>
+<html lang="en" class="scroll-smooth">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>Request Loan - {{ merchant.name }} | KopaDB</title>
+
+  <!-- Fonts -->
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;500;700&family=Satoshi:wght@500;700&display=swap" rel="stylesheet">
+
+  <script src="https://cdn.tailwindcss.com"></script>
+  <script>
+    tailwind.config = {
+      theme: {
+        extend: {
+          colors: {
+            kopa: '#1e40af',
+            'kopa-dark': '#1e3a8a',
+            accent: '#10b981',
+            danger: '#ef4444',
+            neutral: '#0f172a',
+            'neutral-light': '#1e293b',
+          },
+          fontFamily: {
+            sans: ['"DM Sans"', 'system-ui', 'sans-serif'],
+            display: ['Satoshi', 'sans-serif'],
+          }
+        }
+      }
+    }
+  </script>
+</head>
+<body class="bg-gradient-to-b from-neutral to-neutral-light min-h-screen text-slate-100 font-sans antialiased">
+
+  <!-- Navbar -->
+  <nav class="fixed top-0 inset-x-0 z-50 bg-neutral/90 backdrop-blur-md border-b border-slate-800">
+    <div class="max-w-7xl mx-auto px-5 sm:px-8 lg:px-12">
+      <div class="flex items-center justify-between h-16">
+        <div class="flex items-center gap-3">
+          <div class="w-9 h-9 bg-gradient-to-br from-kopa to-kopa-dark rounded-md flex items-center justify-center font-display font-bold text-xl shadow-md">
+            K
+          </div>
+          <span class="font-display font-semibold text-xl tracking-tight">KopaDB</span>
+          <span class="ml-2 text-xs font-medium px-2.5 py-1 bg-accent/20 text-accent rounded-full">Customer</span>
+        </div>
+
+        <div class="flex items-center gap-6">
+          <a href="{{ url_for('user_dashboard') }}" class="text-slate-400 hover:text-white text-sm font-medium transition">
+            ← Dashboard
+          </a>
+          <a href="{{ url_for('logout') }}" class="text-slate-400 hover:text-white text-sm font-medium transition">
+            Logout
+          </a>
+        </div>
+      </div>
+    </div>
+  </nav>
+
+  <!-- Main Content -->
+  <main class="pt-24 pb-20 max-w-4xl mx-auto px-5 sm:px-8 lg:px-12">
+
+    <!-- Page Header -->
+    <div class="text-center mb-12">
+      <h1 class="text-3xl sm:text-4xl font-display font-bold mb-3">
+        Request Loan
+      </h1>
+      <p class="text-lg text-slate-400">
+        Borrowing from <span class="text-accent font-semibold">{{ merchant.name }}</span>
+      </p>
+    </div>
+
+    <!-- Merchant Info Card -->
+    <div class="bg-neutral-light/80 backdrop-blur-sm border border-slate-700 rounded-2xl p-8 mb-10 shadow-xl">
+      <div class="grid grid-cols-1 md:grid-cols-2 gap-8">
+        <div class="flex items-center gap-6">
+          <div class="w-20 h-20 bg-kopa/20 rounded-full flex items-center justify-center text-4xl font-bold text-kopa shadow-inner">
+            {{ merchant.name[0].upper() }}
+          </div>
+          <div>
+            <h3 class="text-2xl font-display font-semibold">{{ merchant.name }}</h3>
+            <p class="text-sm text-slate-400 mt-1">
+              Available Balance: <strong class="text-accent">${{ "%.2f"|format(merchant.balance|float) }}</strong>
+            </p>
+          </div>
+        </div>
+
+        <div class="flex flex-col justify-center items-start md:items-end">
+          <p class="text-sm text-slate-400">Merchant since</p>
+          <p class="text-lg font-medium">{{ merchant.created_at.split(' ')[0] }}</p>
+        </div>
+      </div>
+    </div>
+
+    <!-- Risk Score Notice -->
+    <div class="mb-10 p-6 bg-slate-900/70 border border-slate-700 rounded-xl shadow-lg">
+      <div class="flex items-start gap-4">
+        <svg class="w-8 h-8 text-accent flex-shrink-0 mt-1" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+          <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"/>
+        </svg>
+        <div>
+          <h3 class="text-lg font-semibold text-white mb-2">Your Risk Profile</h3>
+          <p class="text-slate-300">
+            Current behavioral risk score: 
+            <span class="font-bold text-{{ 'accent' if customer.risk_score == 0 else 'kopa' if customer.risk_score == 1 else 'danger' }}">
+              {{ customer.risk_score }} / 2
+            </span>
+          </p>
+          <p class="text-sm text-slate-400 mt-2">
+            This score is automatically shared with the merchant to help them make an informed lending decision.
+          </p>
+        </div>
+      </div>
+    </div>
+
+    <!-- Loan Request Form -->
+    <form method="POST" class="bg-neutral-light/80 backdrop-blur-sm border border-slate-700 rounded-2xl p-8 shadow-xl">
+      <div class="mb-8">
+        <label for="amount" class="block text-sm font-medium text-slate-300 mb-3">
+          Loan Amount (USD)
+        </label>
+        <div class="relative">
+          <span class="absolute inset-y-0 left-0 pl-4 flex items-center text-slate-400 text-lg">$</span>
+          <input 
+            type="number" 
+            id="amount" 
+            name="amount" 
+            required 
+            min="1" 
+            step="0.01"
+            max="{{ merchant.balance }}"
+            class="w-full pl-10 pr-4 py-5 bg-slate-900 border border-slate-700 rounded-xl focus:outline-none focus:border-accent focus:ring-2 focus:ring-accent/30 text-white text-xl font-medium placeholder-slate-600 transition"
+            placeholder="e.g. 5000.00"
+          />
+        </div>
+        <p class="mt-3 text-sm text-slate-400">
+          Available from this merchant: <strong>${{ "%.2f"|format(merchant.balance|float) }}</strong>
+        </p>
+      </div>
+
+      <button 
+        type="submit"
+        class="w-full bg-gradient-to-r from-kopa to-kopa-dark hover:from-blue-700 hover:to-blue-800 text-white font-semibold py-5 rounded-xl transition shadow-2xl text-lg transform hover:scale-[1.02]"
+      >
+        Submit Loan Request
+      </button>
+    </form>
+
+    <p class="text-center text-sm text-slate-500 mt-10">
+      By submitting this request, you agree to the 
+      <a href="#" class="text-kopa hover:underline">Loan Terms & Conditions</a>.
+    </p>
+  </main>
+
+  <!-- Footer -->
+  <footer class="border-t border-slate-800 bg-neutral py-8 text-center text-sm text-slate-500 mt-16">
+    © {{ current_year|default(2026) }} KopaDB. All rights reserved.<br>
+    <span class="text-xs">AES-256 encryption • Full audit trail • Regulated-grade security</span>
+  </footer>
+
+  <!-- Flash Messages (floating top-right) -->
+  {% with messages = get_flashed_messages(with_categories=true) %}
+    {% if messages %}
+      <div class="fixed top-20 right-6 z-50 space-y-3 max-w-sm">
+        {% for category, message in messages %}
+          <div class="p-4 rounded-xl shadow-2xl text-white text-sm font-medium
+            {{ 'bg-green-600 border border-green-500' if category == 'success' else 'bg-red-600 border border-red-500' }}">
+            {{ message }}
+          </div>
+        {% endfor %}
+      </div>
+    {% endif %}
+  {% endwith %}
+
+</body>
+</html>

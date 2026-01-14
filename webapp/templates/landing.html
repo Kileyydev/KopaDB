@@ -1,0 +1,209 @@
+<!DOCTYPE html>
+<html lang="en" class="scroll-smooth">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>KopaDB – Secure Peer-to-Peer Lending</title>
+
+  <!-- Fonts: Satoshi (display/headings) + DM Sans (body) - modern fintech vibe -->
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;500;700&family=Satoshi:wght@400;500;700&display=swap" rel="stylesheet">
+
+  <script src="https://cdn.tailwindcss.com"></script>
+  <script>
+    tailwind.config = {
+      theme: {
+        extend: {
+          colors: {
+            glass: 'rgba(255, 255, 255, 0.06)',
+            kopa: '#1e40af',
+            'kopa-dark': '#1e3a8a',
+            accent: '#10b981',
+          },
+          fontFamily: {
+            sans: ['"DM Sans"', 'system-ui', 'sans-serif'],
+            display: ['Satoshi', 'sans-serif'],
+          },
+          backdropBlur: { sm: '6px' },
+        }
+      }
+    }
+  </script>
+</head>
+<body class="bg-slate-950 text-slate-100 font-sans antialiased">
+
+  <!-- Compact Navbar -->
+  <nav class="fixed top-0 inset-x-0 z-50 bg-slate-950/80 backdrop-blur-md border-b border-slate-800/40">
+    <div class="max-w-7xl mx-auto px-5 sm:px-8 lg:px-12">
+      <div class="flex items-center justify-between h-16">
+        <div class="flex items-center gap-3">
+          <div class="w-8 h-8 bg-gradient-to-br from-kopa to-kopa-dark rounded-md flex items-center justify-center font-display font-bold text-lg">
+            K
+          </div>
+          <span class="font-display font-semibold text-xl tracking-tight">KopaDB</span>
+        </div>
+
+        <div class="flex items-center gap-8">
+          <div class="hidden md:flex gap-9 text-sm font-medium">
+            <a href="#" class="hover:text-accent transition-colors">How it Works</a>
+            <a href="/register_merchant" class="hover:text-accent transition-colors">Merchants</a>
+            <a href="/register_customer" class="hover:text-accent transition-colors">Customers</a>
+            <a href="#" class="hover:text-accent transition-colors">Security</a>
+          </div>
+          <a href="/login" class="text-sm font-medium hover:text-accent transition-colors hidden sm:block">Sign in</a>
+          <a href="/register_customer" class="bg-kopa hover:bg-kopa-dark px-5 py-2 rounded-md text-sm font-semibold transition shadow-md">
+            Get Started
+          </a>
+        </div>
+      </div>
+    </div>
+  </nav>
+
+  <!-- Hero - dense -->
+  <section class="pt-24 pb-20 md:pt-28 md:pb-24">
+    <div class="max-w-5xl mx-auto px-5 sm:px-8 lg:px-12 text-center">
+      <div class="inline-flex items-center gap-2 px-4 py-1 bg-slate-800/60 backdrop-blur-sm border border-slate-700 rounded-full text-xs font-medium text-slate-300 mb-6">
+        Custom RDBMS • African Markets • Institutional Security
+      </div>
+
+      <h1 class="text-4xl sm:text-5xl md:text-6xl font-display font-bold tracking-tight leading-tight mb-6">
+        Smart Lending.<br class="hidden sm:block"/>
+        <span class="bg-gradient-to-r from-kopa to-accent bg-clip-text text-transparent">
+          Built Secure.
+        </span>
+      </h1>
+
+      <p class="text-base sm:text-lg text-slate-300 max-w-3xl mx-auto mb-8 leading-relaxed">
+        Connecting trusted merchants with creditworthy customers — transparent, fast, and powered by a custom relational engine.
+      </p>
+
+      <div class="flex flex-col sm:flex-row justify-center gap-4 max-w-sm mx-auto">
+        <a href="/register_customer"
+           class="bg-kopa hover:bg-kopa-dark text-white font-medium px-8 py-3 rounded-lg transition shadow-lg">
+          Register as Customer
+        </a>
+        <a href="/register_merchant"
+           class="bg-slate-800/70 backdrop-blur-sm border border-slate-600 hover:border-accent hover:text-accent text-white font-medium px-8 py-3 rounded-lg transition">
+          Become a Merchant
+        </a>
+      </div>
+    </div>
+  </section>
+
+  <!-- Trust bar - tight -->
+  <div class="border-t border-slate-800 bg-slate-900/40">
+    <div class="max-w-5xl mx-auto px-5 sm:px-8 lg:px-12 py-10">
+      <div class="grid grid-cols-2 md:grid-cols-4 gap-6 text-center">
+        <div>
+          <div class="text-2xl font-bold text-white">KES 500M+</div>
+          <p class="text-slate-400 text-xs mt-1">Lent & Repaid</p>
+        </div>
+        <div>
+          <div class="text-2xl font-bold text-accent">99.9%</div>
+          <p class="text-slate-400 text-xs mt-1">Uptime</p>
+        </div>
+        <div>
+          <div class="text-2xl font-bold text-white">24/7</div>
+          <p class="text-slate-400 text-xs mt-1">Monitoring</p>
+        </div>
+        <div>
+          <div class="text-2xl font-bold text-white">10K+</div>
+          <p class="text-slate-400 text-xs mt-1">Transactions</p>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Features - compact -->
+  <section class="py-20 bg-slate-950">
+    <div class="max-w-5xl mx-auto px-5 sm:px-8 lg:px-12">
+      <h2 class="text-3xl sm:text-4xl font-display font-bold text-center mb-12">
+        Why KopaDB
+      </h2>
+
+      <div class="grid md:grid-cols-3 gap-8">
+        <div class="bg-slate-900/50 backdrop-blur-sm border border-slate-800 p-7 rounded-lg hover:border-accent/60 transition">
+          <div class="w-12 h-12 bg-kopa/10 rounded-md flex items-center justify-center mb-5">
+            <svg class="w-6 h-6 text-kopa" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 15v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2zm10-10V7a4 4 0 00-8 0v4h8z" />
+            </svg>
+          </div>
+          <h3 class="text-lg font-semibold mb-3">Institutional Security</h3>
+          <p class="text-slate-400 text-sm">Immutable logging in custom RDBMS. Full audit trail.</p>
+        </div>
+
+        <div class="bg-slate-900/50 backdrop-blur-sm border border-slate-800 p-7 rounded-lg hover:border-accent/60 transition">
+          <div class="w-12 h-12 bg-accent/10 rounded-md flex items-center justify-center mb-5">
+            <svg class="w-6 h-6 text-accent" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m5.618-4.016A11.955 11.955 0 0112 2.944a11.955 11.955 0 01-8.618 3.04A12.02 12.02 0 003 9c0 5.591 3.824 10.29 9 11.622 5.176-1.332 9-6.03 9-11.622z" />
+            </svg>
+          </div>
+          <h3 class="text-lg font-semibold mb-3">Smart Risk Engine</h3>
+          <p class="text-slate-400 text-sm">Auto credit scoring + 24hr approval/failure logic.</p>
+        </div>
+
+        <div class="bg-slate-900/50 backdrop-blur-sm border border-slate-800 p-7 rounded-lg hover:border-accent/60 transition">
+          <div class="w-12 h-12 bg-purple-900/10 rounded-md flex items-center justify-center mb-5">
+            <svg class="w-6 h-6 text-purple-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 10V3L4 14h7v7l9-11h-7z" />
+            </svg>
+          </div>
+          <h3 class="text-lg font-semibold mb-3">Real-time Transparency</h3>
+          <p class="text-slate-400 text-sm">Live balances, instant updates, clean dashboards.</p>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- Footer - proper & compact -->
+  <footer class="bg-slate-900 border-t border-slate-800 py-12">
+    <div class="max-w-7xl mx-auto px-5 sm:px-8 lg:px-12">
+      <div class="grid md:grid-cols-4 gap-10">
+        <div>
+          <div class="flex items-center gap-3 mb-4">
+            <div class="w-8 h-8 bg-gradient-to-br from-kopa to-kopa-dark rounded-md flex items-center justify-center font-display font-bold">
+              K
+            </div>
+            <span class="font-display font-semibold text-lg">KopaDB</span>
+          </div>
+          <p class="text-slate-400 text-sm">
+            Secure P2P lending platform for African markets.
+          </p>
+        </div>
+
+        <div>
+          <h4 class="text-xs font-semibold uppercase tracking-wider mb-4 text-slate-300">Platform</h4>
+          <ul class="space-y-2 text-sm text-slate-400">
+            <li><a href="#" class="hover:text-white transition">How it Works</a></li>
+            <li><a href="#" class="hover:text-white transition">Customers</a></li>
+            <li><a href="#" class="hover:text-white transition">Merchants</a></li>
+          </ul>
+        </div>
+
+        <div>
+          <h4 class="text-xs font-semibold uppercase tracking-wider mb-4 text-slate-300">Company</h4>
+          <ul class="space-y-2 text-sm text-slate-400">
+            <li><a href="#" class="hover:text-white transition">About</a></li>
+            <li><a href="#" class="hover:text-white transition">Contact</a></li>
+          </ul>
+        </div>
+
+        <div>
+          <h4 class="text-xs font-semibold uppercase tracking-wider mb-4 text-slate-300">Legal</h4>
+          <ul class="space-y-2 text-sm text-slate-400">
+            <li><a href="#" class="hover:text-white transition">Privacy</a></li>
+            <li><a href="#" class="hover:text-white transition">Terms</a></li>
+            <li><a href="#" class="hover:text-white transition">Security</a></li>
+          </ul>
+        </div>
+      </div>
+
+      <div class="mt-10 pt-6 border-t border-slate-800 text-center text-sm text-slate-500">
+        © <script>document.write(new Date().getFullYear());</script> KopaDB. All rights reserved. Built with security & transparency in mind.
+      </div>
+    </div>
+  </footer>
+
+</body>
+</html>

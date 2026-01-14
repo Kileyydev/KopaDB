@@ -1,0 +1,228 @@
+<!DOCTYPE html>
+<html lang="en" class="scroll-smooth">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>Merchant Dashboard - KopaDB</title>
+
+  <!-- Fonts: Satoshi + DM Sans – clean fintech style -->
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;500;700&family=Satoshi:wght@500;700&display=swap" rel="stylesheet">
+
+  <script src="https://cdn.tailwindcss.com"></script>
+  <script>
+    tailwind.config = {
+      theme: {
+        extend: {
+          colors: {
+            kopa: '#1e40af',
+            'kopa-dark': '#1e3a8a',
+            accent: '#10b981',
+            neutral: '#0f172a',
+            'neutral-light': '#1e293b',
+            danger: '#ef4444',
+          },
+          fontFamily: {
+            sans: ['"DM Sans"', 'system-ui', 'sans-serif'],
+            display: ['Satoshi', 'sans-serif'],
+          }
+        }
+      }
+    }
+  </script>
+</head>
+<body class="bg-neutral min-h-screen text-slate-100 font-sans antialiased">
+
+  <!-- Fixed Top Navigation -->
+  <nav class="fixed top-0 inset-x-0 z-50 bg-neutral/90 backdrop-blur-md border-b border-slate-800">
+    <div class="max-w-7xl mx-auto px-5 sm:px-8 lg:px-12">
+      <div class="flex items-center justify-between h-16">
+        <div class="flex items-center gap-3">
+          <div class="w-9 h-9 bg-gradient-to-br from-kopa to-kopa-dark rounded-md flex items-center justify-center font-display font-bold text-xl shadow-md">
+            K
+          </div>
+          <span class="font-display font-semibold text-xl tracking-tight">KopaDB</span>
+          <span class="ml-2 text-xs font-medium px-2.5 py-1 bg-kopa/20 text-kopa rounded-full">Merchant</span>
+        </div>
+
+        <div class="flex items-center gap-6">
+          <a href="{{ url_for('logout') }}" class="text-slate-400 hover:text-white text-sm font-medium transition flex items-center gap-2">
+            <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17 16l4-4m0 0l-4-4m4 4H7"/></svg>
+            Logout
+          </a>
+        </div>
+      </div>
+    </div>
+  </nav>
+
+  <!-- Main Content -->
+  <main class="pt-24 pb-16 max-w-7xl mx-auto px-5 sm:px-8 lg:px-12">
+
+    <!-- Welcome Header -->
+    <div class="mb-12">
+      <h1 class="text-3xl sm:text-4xl font-display font-bold mb-2">
+        Welcome back, {{ user_name }}
+      </h1>
+      <p class="text-slate-400">Manage your lending portfolio • {{ current_date }}</p>
+    </div>
+
+    <!-- Key Metrics Cards -->
+    <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6 mb-12">
+      <!-- Available Balance -->
+      <div class="bg-neutral-light border border-slate-800 rounded-xl p-6 shadow-lg hover:border-kopa/50 transition-all">
+        <p class="text-sm text-slate-400 mb-1">Available Balance</p>
+        <p class="text-3xl font-display font-bold text-white">
+          ${{ "%.2f"|format(balance) }}
+        </p>
+        <p class="text-xs text-accent mt-2">Ready to lend</p>
+      </div>
+
+      <!-- Active Loans -->
+      <div class="bg-neutral-light border border-slate-800 rounded-xl p-6 shadow-lg hover:border-kopa/50 transition-all">
+        <p class="text-sm text-slate-400 mb-1">Active Loans</p>
+        <p class="text-3xl font-display font-bold text-white">
+          {{ transactions|selectattr("status", "equalto", "pending")|list|length }}
+        </p>
+        <p class="text-xs text-kopa mt-2">Pending approval</p>
+      </div>
+
+      <!-- Total Lent -->
+      <div class="bg-neutral-light border border-slate-800 rounded-xl p-6 shadow-lg hover:border-accent/50 transition-all">
+        <p class="text-sm text-slate-400 mb-1">Total Lent</p>
+        <p class="text-3xl font-display font-bold text-white">
+          ${{ "%.2f"|format(transactions|map(attribute="amount")|sum|float) }}
+        </p>
+        <p class="text-xs text-accent mt-2">All time</p>
+      </div>
+
+      <!-- High-Risk Flags -->
+      <div class="bg-neutral-light border border-slate-800 rounded-xl p-6 shadow-lg hover:border-danger/50 transition-all">
+        <p class="text-sm text-slate-400 mb-1">High-Risk Flags</p>
+        <p class="text-3xl font-display font-bold text-danger">
+          {{ transactions|selectattr("fraud_flag", "equalto", "Yes")|list|length }}
+        </p>
+        <p class="text-xs text-slate-500 mt-2">Requires attention</p>
+      </div>
+    </div>
+
+    <!-- Transactions Table -->
+    <div class="bg-neutral-light border border-slate-800 rounded-xl overflow-hidden shadow-lg mb-12">
+      <div class="p-6 border-b border-slate-800 flex items-center justify-between">
+        <div>
+          <h2 class="text-xl font-display font-semibold">Your Lending Activity</h2>
+          <p class="text-sm text-slate-400 mt-1">Recent transactions and loan statuses</p>
+        </div>
+        <span class="text-xs text-slate-500">Updated {{ current_date }}</span>
+      </div>
+
+      {% if transactions %}
+        <div class="overflow-x-auto">
+          <table class="w-full text-left">
+            <thead class="bg-slate-900/50">
+              <tr>
+                <th class="px-6 py-4 text-sm font-medium text-slate-300">ID</th>
+                <th class="px-6 py-4 text-sm font-medium text-slate-300">Customer</th>
+                <th class="px-6 py-4 text-sm font-medium text-slate-300">Amount</th>
+                <th class="px-6 py-4 text-sm font-medium text-slate-300">Status</th>
+                <th class="px-6 py-4 text-sm font-medium text-slate-300">Date</th>
+                <th class="px-6 py-4 text-sm font-medium text-slate-300">Risk</th>
+              </tr>
+            </thead>
+            <tbody class="divide-y divide-slate-800">
+              {% for t in transactions %}
+                <tr class="hover:bg-slate-800/30 transition">
+                  <td class="px-6 py-4 text-sm font-mono text-slate-300">{{ t.id }}</td>
+                  <td class="px-6 py-4 text-sm font-medium">
+                    {{ t.customer_name or 'Customer #' ~ t.customer_id }}
+                  </td>
+                  <td class="px-6 py-4 text-sm font-medium">
+                    ${{ "%.2f"|format(t.amount|float) }}
+                  </td>
+                  <td class="px-6 py-4">
+                    <span class="inline-flex px-2.5 py-1 text-xs font-medium rounded-full
+                      {% if t.status == 'accepted' %}bg-accent/20 text-accent border border-accent/30
+                      {% elif t.status == 'pending' %}bg-kopa/20 text-kopa border border-kopa/30
+                      {% elif t.status == 'failed' %}bg-danger/20 text-danger border border-danger/30
+                      {% else %}bg-slate-700 text-slate-300 border border-slate-600{% endif %}">
+                      {{ t.status|capitalize }}
+                    </span>
+                  </td>
+                  <td class="px-6 py-4 text-sm text-slate-400">{{ t.timestamp }}</td>
+                  <td class="px-6 py-4">
+                    <span class="inline-flex px-2.5 py-1 text-xs font-medium rounded-full
+                      {% if t.fraud_flag == 'Yes' %}bg-danger/20 text-danger border border-danger/30
+                      {% else %}bg-slate-700 text-slate-300 border border-slate-600{% endif %}">
+                      {{ t.fraud_flag }}
+                    </span>
+                  </td>
+                </tr>
+              {% endfor %}
+            </tbody>
+          </table>
+        </div>
+      {% else %}
+        <div class="p-16 text-center text-slate-400">
+          <svg class="w-16 h-16 mx-auto mb-4 opacity-50" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"/>
+          </svg>
+          <p class="text-lg font-medium">No lending activity yet</p>
+          <p class="mt-2 text-sm">When customers borrow from you, transactions will appear here.</p>
+        </div>
+      {% endif %}
+    </div>
+
+    <!-- Quick Actions (NEW Pending Loan Requests card added first!) -->
+    <div class="mt-12 grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">
+      <!-- Pending Loan Requests – Most important new feature -->
+      <a href="{{ url_for('merchant_loans') }}" 
+         class="bg-gradient-to-br from-kopa to-kopa-dark hover:from-blue-700 hover:to-blue-800 rounded-xl p-8 text-center transition shadow-lg transform hover:-translate-y-1">
+        <h3 class="text-lg font-semibold mb-2 text-white">Pending Loan Requests</h3>
+        <p class="text-sm text-slate-200">Review and approve/reject customer applications</p>
+      </a>
+
+      <!-- Add New Loan -->
+      <a href="{{ url_for('add_transaction_page') }}" 
+         class="bg-neutral-light border border-slate-700 rounded-xl p-8 text-center hover:border-accent hover:shadow-accent/20 transition shadow-lg transform hover:-translate-y-1">
+        <h3 class="text-lg font-semibold mb-2">Add New Loan</h3>
+        <p class="text-sm text-slate-400">Record a new lending transaction quickly</p>
+      </a>
+
+      <!-- Fund Account -->
+      <a href="#" 
+         class="bg-neutral-light border border-slate-700 rounded-xl p-8 text-center hover:border-accent hover:shadow-accent/20 transition shadow-lg transform hover:-translate-y-1">
+        <h3 class="text-lg font-semibold mb-2">Fund Account</h3>
+        <p class="text-sm text-slate-400">Increase your lending capacity</p>
+      </a>
+
+      <!-- Risk Reports -->
+      <a href="#" 
+         class="bg-neutral-light border border-slate-700 rounded-xl p-8 text-center hover:border-kopa hover:shadow-kopa/20 transition shadow-lg transform hover:-translate-y-1">
+        <h3 class="text-lg font-semibold mb-2">Risk Reports</h3>
+        <p class="text-sm text-slate-400">View fraud & performance analytics</p>
+      </a>
+    </div>
+  </main>
+
+  <!-- Footer -->
+  <footer class="border-t border-slate-800 bg-neutral py-8 text-center text-sm text-slate-500">
+    © {{ current_year|default(2026) }} KopaDB. All rights reserved.<br>
+    <span class="text-xs">AES-256 encryption • Full audit trail • Regulated-grade security</span>
+  </footer>
+
+  <!-- Flash Messages (floating top-right) -->
+  {% with messages = get_flashed_messages(with_categories=true) %}
+    {% if messages %}
+      <div class="fixed top-20 right-6 z-50 space-y-3 max-w-sm">
+        {% for category, message in messages %}
+          <div class="p-4 rounded-lg shadow-xl text-white text-sm font-medium
+            {{ 'bg-green-600 border border-green-500' if category == 'success' else 'bg-red-600 border border-red-500' }}">
+            {{ message }}
+          </div>
+        {% endfor %}
+      </div>
+    {% endif %}
+  {% endwith %}
+
+</body>
+</html>

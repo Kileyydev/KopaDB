@@ -1,0 +1,111 @@
+{
+  "merchants": {
+    "columns": [
+      "id",
+      "name",
+      "email",
+      "password_hash",
+      "balance",
+      "created_at"
+    ],
+    "rows": [
+      {
+        "id": "1",
+        "name": "Pesapal",
+        "email": "pesapal@example.com",
+        "password_hash": "ef92b778bafe771e89245b89ecbc08a44a4e166c06659911881f383d4473e94f",
+        "balance": 1000000,
+        "created_at": "2026-01-14 12:37:05"
+      },
+      {
+        "id": "2522",
+        "name": "Acme Traders",
+        "email": "kim@123.edu",
+        "password_hash": "42324f50a82b985bf0b51d52702c88e75128c179f246c95ae7fcd338c2153354",
+        "balance": 999101.0,
+        "created_at": "2026-01-14 12:48:54"
+      }
+    ],
+    "primary_key": "id",
+    "unique_keys": [],
+    "indexes": {}
+  },
+  "customers": {
+    "columns": [
+      "id",
+      "name",
+      "email",
+      "password_hash",
+      "created_at"
+    ],
+    "rows": [
+      {
+        "id": "1",
+        "name": "Ivy",
+        "email": "ivy@example.com",
+        "password_hash": "ef92b778bafe771e89245b89ecbc08a44a4e166c06659911881f383d4473e94f",
+        "created_at": "2026-01-14 12:37:05"
+      },
+      {
+        "id": "6258",
+        "name": "Coffee",
+        "email": "imkiy03@gmail.com",
+        "password_hash": "42324f50a82b985bf0b51d52702c88e75128c179f246c95ae7fcd338c2153354",
+        "created_at": "2026-01-14 12:37:17"
+      }
+    ],
+    "primary_key": "id",
+    "unique_keys": [],
+    "indexes": {}
+  },
+  "transactions": {
+    "columns": [
+      "id",
+      "merchant_id",
+      "customer_id",
+      "amount",
+      "status",
+      "timestamp",
+      "fraud_flag"
+    ],
+    "rows": [
+      {
+        "id": "940340",
+        "merchant_id": "1",
+        "customer_id": "6258",
+        "amount": 900000.0,
+        "status": "pending",
+        "timestamp": "2026-01-14 12:47:54",
+        "fraud_flag": "Risk Score: N/A",
+        "merchant_name": "Pesapal"
+      },
+      {
+        "id": "577554",
+        "merchant_id": "2522",
+        "customer_id": "6258",
+        "amount": 899.0,
+        "status": "accepted",
+        "timestamp": "2026-01-14 12:49:19",
+        "fraud_flag": "Approved",
+        "customer_name": "Coffee",
+        "risk_score": "N/A",
+        "merchant_name": "Acme Traders"
+      },
+      {
+        "id": "731496",
+        "merchant_id": "2522",
+        "customer_id": "6258",
+        "amount": 8000.0,
+        "status": "failed",
+        "timestamp": "2026-01-14 15:34:05",
+        "fraud_flag": "Rejected",
+        "merchant_name": "Acme Traders",
+        "customer_name": "Coffee",
+        "risk_score": "N/A"
+      }
+    ],
+    "primary_key": "id",
+    "unique_keys": [],
+    "indexes": {}
+  }
+}
