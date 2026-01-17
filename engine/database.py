@@ -4,118 +4,144 @@ from .table import Table
 from .index import Index
 
 class Database:
-    def __init__(self):
+    def __init__(self, data_file="kopadb_data.json"):
         self.tables = {}
-        self.data_file = "kopadb_data.json"  # File where data is saved
-        self._load_data()  # Load from disk on startup
+        self.data_file = data_file
+        self._load_data()
 
+    # =========================
+    # Persistence
+    # =========================
     def _load_data(self):
-        """Load all tables from JSON file if it exists"""
-        if os.path.exists(self.data_file):
-            try:
-                with open(self.data_file, 'r') as f:
-                    data = json.load(f)
-                for table_name, table_data in data.items():
-                    # Rebuild Table object
-                    table = Table(
-                        name=table_name,
-                        columns=table_data["columns"],
-                        primary_key=table_data.get("primary_key"),
-                        unique_keys=table_data.get("unique_keys")
-                    )
-                    table.rows = table_data["rows"]  # Restore rows
-                    table.indexes = table_data.get("indexes", {})  # Restore indexes if any
-                    self.tables[table_name] = table
-                print(f"[Database] Loaded {len(self.tables)} tables from disk")
-            except Exception as e:
-                print(f"[Database] Error loading data: {e}")
-                self.tables = {}  # Start fresh if corrupted
+        if not os.path.exists(self.data_file):
+            return
+
+        try:
+            with open(self.data_file, "r") as f:
+                data = json.load(f)
+
+            for table_name, t in data.items():
+                table = Table(
+                    name=table_name,
+                    columns=list(t["schema"].items()),  # schema → [(col, type)]
+                    primary_key=t.get("primary_key"),
+                    unique_keys=t.get("unique_keys", [])
+                )
+                table.rows = t.get("rows", [])
+
+                # rebuild indexes
+                for col in t.get("indexes", []):
+                    idx = Index(col)
+                    table.create_index(col, idx)
+
+                self.tables[table_name] = table
+
+            print(f"[Database] Loaded {len(self.tables)} tables")
+
+        except Exception as e:
+            print("[Database] Load failed:", e)
+            self.tables = {}
 
     def _save_data(self):
-        """Save all tables to JSON file"""
-        try:
-            data = {}
-            for name, table in self.tables.items():
-                data[name] = {
-                    "columns": table.columns,
-                    "rows": table.rows,
-                    "primary_key": table.primary_key,
-                    "unique_keys": table.unique_keys,
-                    "indexes": table.indexes  # Save indexes too if implemented
-                }
-            with open(self.data_file, 'w') as f:
-                json.dump(data, f, indent=2)
-            print(f"[Database] Saved {len(self.tables)} tables to disk")
-        except Exception as e:
-            print(f"[Database] Error saving data: {e}")
+        data = {}
+        for name, table in self.tables.items():
+            data[name] = {
+                "schema": table.schema,
+                "rows": table.rows,
+                "primary_key": table.primary_key,
+                "unique_keys": table.unique_keys,
+                "indexes": list(table.indexes.keys())
+            }
 
+        with open(self.data_file, "w") as f:
+            json.dump(data, f, indent=2)
+
+    # =========================
+    # Schema
+    # =========================
     def create_table(self, name, columns, primary_key=None, unique_keys=None):
         if name in self.tables:
             raise ValueError("Table already exists")
-        self.tables[name] = Table(name, columns, primary_key, unique_keys)
-        self._save_data()  # Persist after creation
 
+        # normalize columns
+        if isinstance(columns, dict):
+            normalized = list(columns.items())
+        elif isinstance(columns, list):
+            normalized = columns
+        else:
+            raise ValueError("Invalid columns format")
+
+        self.tables[name] = Table(
+            name=name,
+            columns=normalized,
+            primary_key=primary_key,
+            unique_keys=unique_keys or []
+        )
+
+        self._save_data()
+
+    def show_tables(self):
+        return list(self.tables.keys())
+
+    def describe_table(self, table_name):
+        table = self._get_table(table_name)
+        return {
+            "schema": table.schema,
+            "primary_key": table.primary_key,
+            "unique_keys": table.unique_keys,
+            "indexes": list(table.indexes.keys())
+        }
+
+    # =========================
+    # CRUD
+    # =========================
     def insert(self, table_name, row):
-        table = self.tables.get(table_name)
-        if not table:
-            raise ValueError("Table not found")
+        table = self._get_table(table_name)
         table.insert(row)
-
-        # Auto-update merchant balance if transaction
-        if table_name == "transactions":
-            self._update_merchant_balance(row)
-
-        self._save_data()  # ← CRITICAL: Save after every insert!
-
-    def _update_merchant_balance(self, transaction):
-        merchant_id = transaction["merchant_id"]
-        merchant_table = self.tables.get("merchants")
-        if not merchant_table:
-            return
-
-        for m in merchant_table.rows:
-            if m["id"] == merchant_id:
-                if transaction["status"] == "complete":
-                    current_balance = float(m.get("balance", 0))
-                    m["balance"] = current_balance + float(transaction["amount"])
-                self._save_data()  # Save balance update too
+        self._save_data()
 
     def select_all(self, table_name, filters=None):
-        table = self.tables.get(table_name)
-        if not table:
-            raise ValueError("Table not found")
+        table = self._get_table(table_name)
         return table.select_all(filters)
 
+    def update(self, table_name, where, updates):
+        table = self._get_table(table_name)
+        table.update(where, updates)
+        self._save_data()
+        return True
+
+    def delete(self, table_name, where):
+        table = self._get_table(table_name)
+        table.delete(where)
+        self._save_data()
+        return True
+
+    # =========================
+    # Indexing
+    # =========================
     def create_index(self, table_name, column):
-        table = self.tables.get(table_name)
-        if not table:
-            raise ValueError("Table not found")
-        index = Index(column)
-        table.create_index(column, index)
-        self._save_data()  # Persist index creation
+        table = self._get_table(table_name)
+        table.create_index(column, Index(column))
+        self._save_data()
+        print(f"[DB] Index created on {table_name}.{column}")
 
+    # =========================
+    # Joins
+    # =========================
     def inner_join(self, left_table, right_table, left_key, right_key):
-        left = self.tables[left_table]
-        right = self.tables[right_table]
+        left = self._get_table(left_table)
+        right = self._get_table(right_table)
         result = []
-
         for l in left.rows:
             for r in right.rows:
-                if l.get(left_key) == r.get(right_key):
+                if l[left_key] == r[right_key]:
                     result.append({**l, **r})
         return result
 
-    # Optional: Add these helper methods if you want full CRUD persistence
-    def update(self, table_name, row_id, updates):
-        table = self.tables.get(table_name)
-        if not table:
-            raise ValueError("Table not found")
-        table.update(row_id, updates)
-        self._save_data()
-
-    def delete(self, table_name, row_id):
-        table = self.tables.get(table_name)
-        if not table:
-            raise ValueError("Table not found")
-        table.delete(row_id)
-        self._save_data()
+    # =========================
+    # Helpers
+    # =========================
+    def _get_table(self, table_name):
+        if table_name not in self.tables:
+            raise ValueError(f"Table '{table_name}' not found")
+        return self.tables[table_name]

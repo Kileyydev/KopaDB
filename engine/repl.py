@@ -1,80 +1,129 @@
 from engine.database import Database
-from engine.parser import parse
+from engine.parser import parse, ParseError
 
 db = Database()
+
 
 def pretty_print(rows):
     if not rows:
         print("No results.")
         return
-    # get columns from first row
-    columns = list(rows[0].keys())
-    widths = [max(len(str(row[col])) for row in rows + [{col: col}]) for col in columns]
 
-    # header
-    header = " | ".join(col.ljust(widths[i]) for i, col in enumerate(columns))
-    sep = "-+-".join('-' * widths[i] for i in range(len(columns)))
+    columns = list(rows[0].keys())
+    widths = {
+        c: max(len(str(r[c])) for r in rows + [{c: c}])
+        for c in columns
+    }
+
+    header = " | ".join(c.ljust(widths[c]) for c in columns)
+    sep = "-+-".join("-" * widths[c] for c in columns)
+
     print(header)
     print(sep)
 
-    # rows
     for row in rows:
-        print(" | ".join(str(row[col]).ljust(widths[i]) for i, col in enumerate(columns)))
+        print(" | ".join(str(row[c]).ljust(widths[c]) for c in columns))
 
-print("Welcome to KopaDB. Type 'exit' to quit.")
+
+print("🚀 Welcome to KopaDB (type 'exit' to quit)")
+
 
 while True:
     try:
-        command = input("kopadb> ").strip()
-        if command.lower() == "exit":
-            print("Goodbye!")
-            break
-        if not command:
+        cmd = input("kopadb> ").strip()
+
+        if not cmd:
             continue
 
-        parsed = parse(command)
+        if cmd.lower() == "exit":
+            print("Goodbye!")
+            break
+
+        # remove trailing semicolon safely
+        if cmd.endswith(";"):
+            cmd = cmd[:-1]
+
+        parsed = parse(cmd)
         if not parsed:
             continue
 
-        action, tokens = parsed
+        cmd_type = parsed["type"]
 
-        if action == "CREATE":
-            table = tokens[2]
-            columns = tokens[3].strip("()").split(",")
-            db.create_table(table, columns, primary_key=columns[0])
-            print(f"Table {table} created.")
+        # ================= CREATE =================
+        if cmd_type == "CREATE":
+            table_name = parsed["table"]
+            columns = parsed["columns"]
 
-        elif action == "INSERT":
-            table = tokens[2]
-            values = tokens[4].strip("()").split(",")
-            row = dict(zip(db.tables[table].columns, values))
-            db.insert(table, row)
-            print("Row inserted.")
+            db.create_table(
+                table_name,
+                columns,
+                primary_key=columns[0][0]
+            )
 
-        elif action == "SELECT":
-            table = tokens[3]
-            rows = db.select_all(table)
+            print(f"✅ Table '{table_name}' created.")
+
+        # ================= INSERT =================
+        elif cmd_type == "INSERT":
+            table_name = parsed["table"]
+            table = db.tables[table_name]
+            values = parsed["values"]
+
+            if len(values) != len(table.columns):
+                raise ValueError("Column count does not match values count")
+
+            row = dict(zip(table.columns, values))
+            db.insert(table_name, row)
+
+            print(f"✅ Row inserted into '{table_name}'.")
+
+        # ================= SELECT =================
+        elif cmd_type == "SELECT":
+            table_name = parsed["table"]
+            filters = parsed.get("where")
+
+            rows = db.select_all(table_name, filters)
             pretty_print(rows)
 
-        elif action == "WHERE":
-            table = tokens[1]
-            column = tokens[2]
-            value = tokens[3]
-            rows = db.select_where(table, column, value)
+        # ================= UPDATE =================
+        elif cmd_type == "UPDATE":
+            table_name = parsed["table"]
+            set_values = parsed["set"]
+            where_filters = parsed.get("where")
+
+            count = db.update(table_name, where_filters, set_values)
+            print(f"✅ {count} row(s) updated in '{table_name}'.")
+
+        # ================= DELETE =================
+        elif cmd_type == "DELETE":
+            table_name = parsed["table"]
+            where_filters = parsed.get("where")
+
+            count = db.delete(table_name, where_filters)
+            print(f"✅ {count} row(s) deleted from '{table_name}'.")
+
+        # ================= INDEX =================
+        elif cmd_type == "INDEX":
+            table_name = parsed["table"]
+            column = parsed["column"]
+
+            db.create_index(table_name, column)
+            print(f"✅ Index created on '{column}' in '{table_name}'.")
+
+        # ================= JOIN =================
+        elif cmd_type == "JOIN":
+            left = parsed["left_table"]
+            right = parsed["right_table"]
+            left_key = parsed["left_key"]
+            right_key = parsed["right_key"]
+
+            rows = db.inner_join(left, right, left_key, right_key)
             pretty_print(rows)
-
-        elif action == "INDEX":
-            table = tokens[2]
-            column = tokens[3]
-            db.create_index(table, column)
-            print("Index created.")
-
-        elif action == "JOIN":
-            result = db.inner_join(tokens[1], tokens[2], tokens[3], tokens[4])
-            pretty_print(result)
 
         else:
-            print("Unknown command.")
+            print("⚠️ Unsupported command.")
+
+    except ParseError as pe:
+        print("❌ Syntax Error:", pe)
 
     except Exception as e:
-        print("Error:", e)
+        print("❌ Error:", e)

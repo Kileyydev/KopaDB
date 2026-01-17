@@ -1,89 +1,148 @@
 import datetime
+from engine.index import Index
+
+# ... imports same ...
 
 class Table:
-    def __init__(self, name, columns, primary_key=None, unique_keys=None):
-        """
-        Initialize a Table.
+    SUPPORTED_TYPES = {"INT", "FLOAT", "TEXT", "TIMESTAMP"}
 
-        :param name: Table name
-        :param columns: List of column names
-        :param primary_key: Optional primary key column
-        :param unique_keys: Optional list of columns with unique constraints
-        """
+    def __init__(self, name, columns, primary_key=None, unique_keys=None):
         self.name = name
-        self.columns = columns
+        self.schema = {}
+        self.columns = []
+
+        for col in columns:
+            if isinstance(col, tuple):
+                name, dtype = col
+                dtype = dtype.upper()
+                if dtype not in self.SUPPORTED_TYPES:
+                    raise ValueError(f"Unsupported type: {dtype}")
+                self.schema[name] = dtype
+            else:
+                self.schema[col] = "TEXT"
+            self.columns.append(name if isinstance(col, tuple) else col)
+
         self.primary_key = primary_key
         self.unique_keys = unique_keys or []
         self.rows = []
-        self.indexes = {}  # {column_name: Index instance}
+        self.indexes = {}  # column → Index
+
+    def _cast(self, column, value):
+        if value is None:
+            return None
+        dtype = self.schema.get(column)
+        if not dtype:
+            return value
+
+        try:
+            if dtype == "INT":     return int(value)
+            if dtype == "FLOAT":   return float(value)
+            if dtype == "TEXT":    return str(value)
+            if dtype == "TIMESTAMP":
+                if isinstance(value, datetime.datetime):
+                    return value.isoformat()
+                return str(value)
+        except (ValueError, TypeError):
+            raise ValueError(f"Cannot cast {value!r} to {dtype} for column {column}")
+
+        return value
 
     def insert(self, row):
-        """
-        Insert a row into the table. Auto-fills timestamps if columns exist.
-        Enforces primary key and unique constraints.
-        """
-        full_row = {}
+        new_row = {}
+
         for col in self.columns:
             if col in row:
-                full_row[col] = row[col]
+                new_row[col] = self._cast(col, row[col])
+            elif self.schema[col] == "TIMESTAMP":
+                new_row[col] = datetime.datetime.now().isoformat()
             else:
-                # Auto-fill timestamps
-                if col in ("created_at", "updated_at", "timestamp"):
-                    full_row[col] = datetime.datetime.now().isoformat()
-                else:
-                    full_row[col] = None  # Fill missing columns with None
+                new_row[col] = None
 
-        # Primary key check
+        # PK check
         if self.primary_key:
+            pk_val = new_row[self.primary_key]
             for r in self.rows:
-                if r[self.primary_key] == full_row[self.primary_key]:
-                    raise ValueError(f"Primary key violation: {self.primary_key}={full_row[self.primary_key]}")
+                if r[self.primary_key] == pk_val:
+                    raise ValueError(f"Primary key violation on {self.primary_key} = {pk_val}")
 
-        # Unique key checks
-        for key in self.unique_keys:
+        # Unique checks
+        for uk in self.unique_keys:
+            uk_val = new_row[uk]
             for r in self.rows:
-                if r[key] == full_row[key]:
-                    raise ValueError(f"Unique constraint violation on column: {key}")
+                if r[uk] == uk_val:
+                    raise ValueError(f"Unique constraint violation on {uk} = {uk_val}")
 
-        # Add the row
-        self.rows.append(full_row)
+        self.rows.append(new_row)
 
         # Update indexes
-        for col, index in self.indexes.items():
-            index.add(full_row[col], full_row)
+        for col, idx in self.indexes.items():
+            idx.add(new_row[col], new_row)
 
-    def create_index(self, column, index):
-        """
-        Attach an Index object to a column for fast lookups.
-        """
-        self.indexes[column] = index
-        for row in self.rows:
-            index.add(row[column], row)
+        return new_row
 
+def create_index(self, column):
+    """
+    Create and attach a new index on the given column.
+    Automatically rebuilds it using current table rows.
+    """
+    if column not in self.schema:
+        raise ValueError(f"Column '{column}' does not exist in table '{self.name}'")
+    
+    if column in self.indexes:
+        print(f"→ Index on '{column}' already exists (skipping)")
+        return
+    
+    idx = Index(column)                     # ← Index is created here
+    self.indexes[column] = idx
+    idx.rebuild(self.rows)                  # ← rebuilds/populates the index
+    print(f"→ Index created on column '{column}' ({len(self.rows)} rows indexed)")
+    
+    
     def select_all(self, filters=None):
-        """
-        Select all rows, optionally applying filters as a dict.
-        """
-        results = self.rows
-        if filters:
-            for key, val in filters.items():
-                results = [r for r in results if r.get(key) == val]
-        return results
+        if not filters:
+            return list(self.rows)
+
+        result = self.rows[:]
+
+        for col, want in filters.items():
+            want = self._cast(col, want)
+
+            if col in self.indexes:
+                result = self.indexes[col].lookup(want)
+            else:
+                result = [r for r in result if r.get(col) == want]
+
+        return result
 
     def update(self, filters, updates):
-        """
-        Update rows that match filters.
-        """
         rows = self.select_all(filters)
+        count = len(rows)
+
         for row in rows:
-            for key, val in updates.items():
-                if key in self.columns:
-                    row[key] = val
-            if "updated_at" in self.columns:
+            # Remove from old indexes
+            for col, idx in self.indexes.items():
+                idx.remove(row[col], row)
+
+            for col, val in updates.items():
+                if col in self.schema:
+                    row[col] = self._cast(col, val)
+
+            if "updated_at" in self.schema:
                 row["updated_at"] = datetime.datetime.now().isoformat()
 
+            # Re-add to indexes
+            for col, idx in self.indexes.items():
+                idx.add(row[col], row)
+
+        return count
+
     def delete(self, filters):
-        """
-        Delete rows that match filters.
-        """
-        self.rows = [r for r in self.rows if not all(r.get(k) == v for k, v in filters.items())]
+        to_delete = self.select_all(filters)
+        count = len(to_delete)
+
+        for row in to_delete:
+            for col, idx in self.indexes.items():
+                idx.remove(row[col], row)
+            self.rows.remove(row)
+
+        return count

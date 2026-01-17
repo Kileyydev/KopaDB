@@ -5,7 +5,7 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
   <title>Merchant Dashboard - KopaDB</title>
 
-  <!-- Fonts: Satoshi + DM Sans – clean fintech style -->
+  <!-- Fonts -->
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;500;700&family=Satoshi:wght@500;700&display=swap" rel="stylesheet">
@@ -69,16 +69,14 @@
 
     <!-- Key Metrics Cards -->
     <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6 mb-12">
-      <!-- Available Balance -->
       <div class="bg-neutral-light border border-slate-800 rounded-xl p-6 shadow-lg hover:border-kopa/50 transition-all">
         <p class="text-sm text-slate-400 mb-1">Available Balance</p>
         <p class="text-3xl font-display font-bold text-white">
-          ${{ "%.2f"|format(balance) }}
+          ${{ "%.2f"|format(balance|float) }}
         </p>
         <p class="text-xs text-accent mt-2">Ready to lend</p>
       </div>
 
-      <!-- Active Loans -->
       <div class="bg-neutral-light border border-slate-800 rounded-xl p-6 shadow-lg hover:border-kopa/50 transition-all">
         <p class="text-sm text-slate-400 mb-1">Active Loans</p>
         <p class="text-3xl font-display font-bold text-white">
@@ -87,7 +85,6 @@
         <p class="text-xs text-kopa mt-2">Pending approval</p>
       </div>
 
-      <!-- Total Lent -->
       <div class="bg-neutral-light border border-slate-800 rounded-xl p-6 shadow-lg hover:border-accent/50 transition-all">
         <p class="text-sm text-slate-400 mb-1">Total Lent</p>
         <p class="text-3xl font-display font-bold text-white">
@@ -96,7 +93,6 @@
         <p class="text-xs text-accent mt-2">All time</p>
       </div>
 
-      <!-- High-Risk Flags -->
       <div class="bg-neutral-light border border-slate-800 rounded-xl p-6 shadow-lg hover:border-danger/50 transition-all">
         <p class="text-sm text-slate-400 mb-1">High-Risk Flags</p>
         <p class="text-3xl font-display font-bold text-danger">
@@ -172,36 +168,39 @@
       {% endif %}
     </div>
 
-    <!-- Quick Actions (NEW Pending Loan Requests card added first!) -->
-    <div class="mt-12 grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">
-      <!-- Pending Loan Requests – Most important new feature -->
+    <!-- Quick Actions -->
+    <div class="mt-12 grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-5 gap-6">
       <a href="{{ url_for('merchant_loans') }}" 
          class="bg-gradient-to-br from-kopa to-kopa-dark hover:from-blue-700 hover:to-blue-800 rounded-xl p-8 text-center transition shadow-lg transform hover:-translate-y-1">
-        <h3 class="text-lg font-semibold mb-2 text-white">Pending Loan Requests</h3>
-        <p class="text-sm text-slate-200">Review and approve/reject customer applications</p>
+        <h3 class="text-lg font-semibold mb-2 text-white">Pending Requests</h3>
+        <p class="text-sm text-slate-200">Review & approve loans</p>
       </a>
 
-      <!-- Add New Loan -->
+      <a href="{{ url_for('merchant_packages') }}"
+         class="bg-neutral-light border border-slate-700 rounded-xl p-8 text-center hover:border-kopa hover:shadow-kopa/30 transition-all shadow-lg transform hover:-translate-y-1">
+        <h3 class="text-lg font-semibold mb-2">Loan Packages</h3>
+        <p class="text-sm text-slate-400">Set interest rates & tiers</p>
+      </a>
+
       <a href="{{ url_for('add_transaction_page') }}" 
          class="bg-neutral-light border border-slate-700 rounded-xl p-8 text-center hover:border-accent hover:shadow-accent/20 transition shadow-lg transform hover:-translate-y-1">
         <h3 class="text-lg font-semibold mb-2">Add New Loan</h3>
-        <p class="text-sm text-slate-400">Record a new lending transaction quickly</p>
+        <p class="text-sm text-slate-400">Record lending quickly</p>
       </a>
 
-      <!-- Fund Account -->
       <a href="#" 
          class="bg-neutral-light border border-slate-700 rounded-xl p-8 text-center hover:border-accent hover:shadow-accent/20 transition shadow-lg transform hover:-translate-y-1">
         <h3 class="text-lg font-semibold mb-2">Fund Account</h3>
-        <p class="text-sm text-slate-400">Increase your lending capacity</p>
+        <p class="text-sm text-slate-400">Increase lending capacity</p>
       </a>
 
-      <!-- Risk Reports -->
       <a href="#" 
          class="bg-neutral-light border border-slate-700 rounded-xl p-8 text-center hover:border-kopa hover:shadow-kopa/20 transition shadow-lg transform hover:-translate-y-1">
         <h3 class="text-lg font-semibold mb-2">Risk Reports</h3>
-        <p class="text-sm text-slate-400">View fraud & performance analytics</p>
+        <p class="text-sm text-slate-400">Fraud & performance analytics</p>
       </a>
     </div>
+
   </main>
 
   <!-- Footer -->
@@ -210,7 +209,7 @@
     <span class="text-xs">AES-256 encryption • Full audit trail • Regulated-grade security</span>
   </footer>
 
-  <!-- Flash Messages (floating top-right) -->
+  <!-- Flash Messages -->
   {% with messages = get_flashed_messages(with_categories=true) %}
     {% if messages %}
       <div class="fixed top-20 right-6 z-50 space-y-3 max-w-sm">

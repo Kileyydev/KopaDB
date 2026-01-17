@@ -5,7 +5,6 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
   <title>Request Loan - {{ merchant.name }} | KopaDB</title>
 
-  <!-- Fonts -->
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;500;700&family=Satoshi:wght@500;700&display=swap" rel="stylesheet">
@@ -45,7 +44,6 @@
           <span class="font-display font-semibold text-xl tracking-tight">KopaDB</span>
           <span class="ml-2 text-xs font-medium px-2.5 py-1 bg-accent/20 text-accent rounded-full">Customer</span>
         </div>
-
         <div class="flex items-center gap-6">
           <a href="{{ url_for('user_dashboard') }}" class="text-slate-400 hover:text-white text-sm font-medium transition">
             ← Dashboard
@@ -58,70 +56,132 @@
     </div>
   </nav>
 
-  <!-- Main Content -->
-  <main class="pt-24 pb-20 max-w-4xl mx-auto px-5 sm:px-8 lg:px-12">
+  <main class="pt-24 pb-20 max-w-5xl mx-auto px-5 sm:px-8 lg:px-12">
 
-    <!-- Page Header -->
-    <div class="text-center mb-12">
-      <h1 class="text-3xl sm:text-4xl font-display font-bold mb-3">
-        Request Loan
-      </h1>
+    <div class="text-center mb-10">
+      <h1 class="text-3xl sm:text-4xl font-display font-bold mb-3">Request Loan</h1>
       <p class="text-lg text-slate-400">
-        Borrowing from <span class="text-accent font-semibold">{{ merchant.name }}</span>
+        From <span class="text-accent font-semibold">{{ merchant.name }}</span>
       </p>
     </div>
 
-    <!-- Merchant Info Card -->
-    <div class="bg-neutral-light/80 backdrop-blur-sm border border-slate-700 rounded-2xl p-8 mb-10 shadow-xl">
-      <div class="grid grid-cols-1 md:grid-cols-2 gap-8">
-        <div class="flex items-center gap-6">
-          <div class="w-20 h-20 bg-kopa/20 rounded-full flex items-center justify-center text-4xl font-bold text-kopa shadow-inner">
-            {{ merchant.name[0].upper() }}
-          </div>
-          <div>
-            <h3 class="text-2xl font-display font-semibold">{{ merchant.name }}</h3>
-            <p class="text-sm text-slate-400 mt-1">
-              Available Balance: <strong class="text-accent">${{ "%.2f"|format(merchant.balance|float) }}</strong>
-            </p>
-          </div>
+    <!-- Merchant + Risk quick cards -->
+    <div class="grid grid-cols-1 lg:grid-cols-2 gap-6 mb-12">
+      <div class="bg-neutral-light/80 backdrop-blur-sm border border-slate-700 rounded-2xl p-6 shadow-xl flex items-center gap-5">
+        <div class="w-16 h-16 bg-kopa/20 rounded-full flex items-center justify-center text-3xl font-bold text-kopa">
+          {{ merchant.name[0].upper() }}
         </div>
-
-        <div class="flex flex-col justify-center items-start md:items-end">
-          <p class="text-sm text-slate-400">Merchant since</p>
-          <p class="text-lg font-medium">{{ merchant.created_at.split(' ')[0] }}</p>
+        <div>
+          <h3 class="text-xl font-display font-semibold">{{ merchant.name }}</h3>
+          <p class="text-sm text-slate-400">
+            Available: <strong class="text-accent">${{ "%.2f"|format(merchant.balance|float) }}</strong>
+          </p>
         </div>
       </div>
-    </div>
 
-    <!-- Risk Score Notice -->
-    <div class="mb-10 p-6 bg-slate-900/70 border border-slate-700 rounded-xl shadow-lg">
-      <div class="flex items-start gap-4">
-        <svg class="w-8 h-8 text-accent flex-shrink-0 mt-1" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+      <div class="bg-neutral-light/80 backdrop-blur-sm border border-slate-700 rounded-2xl p-6 shadow-xl flex items-center gap-4">
+        <svg class="w-8 h-8 text-accent flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
           <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"/>
         </svg>
         <div>
-          <h3 class="text-lg font-semibold text-white mb-2">Your Risk Profile</h3>
-          <p class="text-slate-300">
-            Current behavioral risk score: 
-            <span class="font-bold text-{{ 'accent' if customer.risk_score == 0 else 'kopa' if customer.risk_score == 1 else 'danger' }}">
-              {{ customer.risk_score }} / 2
-            </span>
+          <h3 class="text-lg font-semibold mb-1">Your Risk Score</h3>
+          <p class="text-2xl font-bold text-{{ 'accent' if customer.risk_score <= 2 else 'danger' }}">
+            {{ customer.risk_score }} / 10
           </p>
-          <p class="text-sm text-slate-400 mt-2">
-            This score is automatically shared with the merchant to help them make an informed lending decision.
-          </p>
+          <p class="text-xs text-slate-400 mt-1">Lower score unlocks better packages</p>
         </div>
       </div>
     </div>
+
+    <!-- === Loan Packages Section === -->
+    <section class="mb-12">
+      <h2 class="text-2xl font-display font-semibold mb-6 text-center md:text-left">
+        Available Packages from {{ merchant.name }}
+      </h2>
+
+      {% if packages %}
+        <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+          {% for pkg in packages %}
+            {% set is_current = (customer.current_package_id == pkg.id) %}
+            {% set can_use = (customer.risk_score|int <= pkg.min_risk_score|int) %}
+
+            <div class="rounded-2xl border-2 shadow-lg overflow-hidden transition-all duration-300
+              {% if is_current %} border-accent bg-accent/10 ring-2 ring-accent/30
+              {% elif can_use %} border-kopa/70 bg-neutral-light/70 hover:border-kopa hover:shadow-kopa/20
+              {% else %} border-slate-700 bg-neutral-light/40 opacity-80
+              {% endif %}">
+
+              <div class="p-6">
+                <div class="flex justify-between items-start mb-4">
+                  <h3 class="text-xl font-bold {{ 'text-accent' if is_current else 'text-kopa' }}">
+                    {{ pkg.name }}
+                  </h3>
+                  <div class="flex flex-col items-end gap-1">
+                    {% if is_current %}
+                      <span class="text-xs px-3 py-1 bg-accent/30 text-accent rounded-full font-medium">
+                        Current
+                      </span>
+                    {% elif can_use %}
+                      <span class="text-xs px-3 py-1 bg-kopa/30 text-kopa rounded-full font-medium">
+                        Available
+                      </span>
+                    {% else %}
+                      <span class="text-xs px-3 py-1 bg-slate-700 text-slate-300 rounded-full">
+                        Locked
+                      </span>
+                    {% endif %}
+                    <span class="text-xs text-slate-400">Tier {{ pkg.order_level }}</span>
+                  </div>
+                </div>
+
+                <div class="space-y-2.5 text-sm">
+                  <p><strong>Max loan:</strong> ${{ "%.0f"|format(pkg.max_amount|float) }}</p>
+                  <p><strong>Interest:</strong> {{ pkg.interest_rate|float }}%</p>
+                  <p><strong>Repayment:</strong> {{ pkg.repayment_days|int }} days</p>
+                  <p><strong>Min risk score:</strong> 
+                    <span class="{{ 'text-danger font-medium' if customer.risk_score|int > pkg.min_risk_score|int else 'text-accent' }}">
+                      ≤ {{ pkg.min_risk_score }}
+                    </span>
+                  </p>
+                </div>
+              </div>
+
+              {% if not can_use %}
+                <div class="bg-slate-900/50 px-6 py-3 text-xs text-center text-slate-400 border-t border-slate-700">
+                  Improve repayments to unlock (need risk score ≤ {{ pkg.min_risk_score }})
+                </div>
+              {% elif not is_current %}
+                <div class="bg-kopa/10 px-6 py-3 text-xs text-center text-kopa border-t border-kopa/30">
+                  Good option — consider upgrading soon
+                </div>
+              {% endif %}
+            </div>
+          {% endfor %}
+        </div>
+
+        <p class="text-center text-sm text-slate-500 mt-8">
+          Your current package determines the interest rate and max amount for this request.
+        </p>
+
+      {% else %}
+        <div class="bg-neutral-light/50 border border-slate-700 rounded-2xl p-10 text-center text-slate-400 shadow-lg">
+          <svg class="w-16 h-16 mx-auto mb-6 opacity-60" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"/>
+          </svg>
+          <p class="text-lg font-medium">No custom packages yet</p>
+          <p class="mt-2">Default rates ({{ default_interest|default('18') }}% interest, 30 days) will apply.</p>
+        </div>
+      {% endif %}
+    </section>
 
     <!-- Loan Request Form -->
     <form method="POST" class="bg-neutral-light/80 backdrop-blur-sm border border-slate-700 rounded-2xl p-8 shadow-xl">
       <div class="mb-8">
         <label for="amount" class="block text-sm font-medium text-slate-300 mb-3">
-          Loan Amount (USD)
+          How much do you need? (USD)
         </label>
         <div class="relative">
-          <span class="absolute inset-y-0 left-0 pl-4 flex items-center text-slate-400 text-lg">$</span>
+          <span class="absolute inset-y-0 left-0 pl-4 flex items-center text-slate-400 text-2xl font-light">$</span>
           <input 
             type="number" 
             id="amount" 
@@ -129,37 +189,35 @@
             required 
             min="1" 
             step="0.01"
-            max="{{ merchant.balance }}"
-            class="w-full pl-10 pr-4 py-5 bg-slate-900 border border-slate-700 rounded-xl focus:outline-none focus:border-accent focus:ring-2 focus:ring-accent/30 text-white text-xl font-medium placeholder-slate-600 transition"
-            placeholder="e.g. 5000.00"
+            class="w-full pl-12 pr-4 py-6 bg-slate-900 border border-slate-700 rounded-xl focus:outline-none focus:border-accent focus:ring-2 focus:ring-accent/30 text-white text-2xl font-medium placeholder-slate-600 transition"
+            placeholder="Enter amount"
           />
         </div>
-        <p class="mt-3 text-sm text-slate-400">
-          Available from this merchant: <strong>${{ "%.2f"|format(merchant.balance|float) }}</strong>
+        <p class="mt-4 text-sm text-slate-400">
+          Max amount depends on your current package • Merchant has ${{ "%.2f"|format(merchant.balance|float) }} available
         </p>
       </div>
 
       <button 
         type="submit"
-        class="w-full bg-gradient-to-r from-kopa to-kopa-dark hover:from-blue-700 hover:to-blue-800 text-white font-semibold py-5 rounded-xl transition shadow-2xl text-lg transform hover:scale-[1.02]"
+        class="w-full bg-gradient-to-r from-kopa to-kopa-dark hover:from-blue-700 hover:to-blue-800 text-white font-bold py-6 rounded-xl transition shadow-2xl text-xl transform hover:scale-[1.02]"
       >
-        Submit Loan Request
+        Submit Request
       </button>
     </form>
 
     <p class="text-center text-sm text-slate-500 mt-10">
-      By submitting this request, you agree to the 
-      <a href="#" class="text-kopa hover:underline">Loan Terms & Conditions</a>.
+      By submitting you agree to the 
+      <a href="#" class="text-kopa hover:underline">terms & repayment conditions</a>.
     </p>
+
   </main>
 
-  <!-- Footer -->
   <footer class="border-t border-slate-800 bg-neutral py-8 text-center text-sm text-slate-500 mt-16">
     © {{ current_year|default(2026) }} KopaDB. All rights reserved.<br>
     <span class="text-xs">AES-256 encryption • Full audit trail • Regulated-grade security</span>
   </footer>
 
-  <!-- Flash Messages (floating top-right) -->
   {% with messages = get_flashed_messages(with_categories=true) %}
     {% if messages %}
       <div class="fixed top-20 right-6 z-50 space-y-3 max-w-sm">

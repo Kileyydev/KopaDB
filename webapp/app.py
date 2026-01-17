@@ -20,11 +20,18 @@ tables_to_create = {
         "primary_key": "id"
     },
     "customers": {
-        "columns": ["id", "name", "email", "password_hash", "created_at", "risk_score", "wallet_balance"],
+        "columns": ["id", "name", "email", "password_hash", "created_at", "risk_score", "wallet_balance",
+                    "current_package_id", "last_good_repayment"],  # added for tier system
         "primary_key": "id"
     },
     "transactions": {
-        "columns": ["id", "merchant_id", "customer_id", "amount", "interest_rate", "repayment_days", "status", "timestamp", "fraud_flag", "due_date"],
+        "columns": ["id", "merchant_id", "customer_id", "amount", "interest_rate", "repayment_days",
+                    "status", "timestamp", "fraud_flag", "due_date"],
+        "primary_key": "id"
+    },
+    "loan_packages": {
+        "columns": ["id", "merchant_id", "name", "max_amount", "interest_rate", "repayment_days",
+                    "min_risk_score", "order_level", "created_at"],
         "primary_key": "id"
     }
 }
@@ -39,6 +46,14 @@ for table_name, config in tables_to_create.items():
         logging.info(f"Created table: {table_name}")
     else:
         logging.info(f"Table {table_name} already exists - skipping")
+
+# Migrate existing customers to have new fields (safe to run multiple times)
+for cust in db.tables["customers"].rows:
+    if "current_package_id" not in cust:
+        cust["current_package_id"] = None
+    if "last_good_repayment" not in cust:
+        cust["last_good_repayment"] = None
+db._save_data()
 
 # ---------------------------
 # Sample data
@@ -62,12 +77,14 @@ if not db.tables["customers"].rows:
         "password_hash": hashlib.sha256("password123".encode()).hexdigest(),
         "created_at": datetime.now().strftime("%Y-%m-%d %H:%M:%S"),
         "risk_score": 0,
-        "wallet_balance": 0.0
+        "wallet_balance": 0.0,
+        "current_package_id": None,
+        "last_good_repayment": None
     })
     db._save_data()
 
 # ---------------------------
-# Helper: Update overdue loans (safe against missing due_date)
+# Helper: Update overdue loans
 # ---------------------------
 def update_overdue_loans():
     today = datetime.now().date()
@@ -75,26 +92,79 @@ def update_overdue_loans():
 
     for t in db.tables["transactions"].rows:
         if t.get("status") == "accepted":
-            # Skip if no due_date (old data before schema update)
             if "due_date" not in t or not t["due_date"]:
                 continue
-
             try:
                 due = datetime.strptime(t["due_date"], "%Y-%m-%d").date()
                 if due < today:
                     customer = next((c for c in db.tables["customers"].rows if c["id"] == t["customer_id"]), None)
                     if customer:
                         old_score = int(customer.get("risk_score", 0))
-                        customer["risk_score"] = min(2, old_score + 1)  # Risk increases
+                        customer["risk_score"] = min(2, old_score + 1)
                         t["status"] = "failed"
                         t["fraud_flag"] = "Overdue - Risk Increased"
                         updated = True
                         logging.info(f"Loan {t['id']} overdue → failed, risk updated")
             except ValueError:
-                continue  # Invalid date → skip
+                continue
 
     if updated:
         db._save_data()
+
+# ---------------------------
+# Helper: Try to upgrade customer tier
+# ---------------------------
+def try_upgrade_customer(customer_id, merchant_id):
+    customer = next((c for c in db.tables["customers"].rows if c["id"] == customer_id), None)
+    if not customer:
+        return False
+
+    current_pkg_id = customer.get("current_package_id")
+    current_level = 0
+
+    if current_pkg_id:
+        pkg = next((p for p in db.tables["loan_packages"].rows if p["id"] == current_pkg_id), None)
+        if pkg:
+            current_level = pkg.get("order_level", 1)
+
+    # Find next tier
+    next_pkg = next(
+        (p for p in db.tables["loan_packages"].rows
+         if p["merchant_id"] == merchant_id
+         and p.get("order_level", 999) == current_level + 1),
+        None
+    )
+
+    if not next_pkg:
+        return False
+
+    # Count good recent loans (simple rule: ≥2 accepted & not overdue)
+    recent_loans = [
+        t for t in db.tables["transactions"].rows
+        if t["customer_id"] == customer_id
+        and t["merchant_id"] == merchant_id
+        and t["status"] in ["accepted", "complete"]  # adjust if you use "complete"
+    ]
+    recent_loans = sorted(recent_loans, key=lambda x: x.get("timestamp", ""), reverse=True)[:5]
+
+    good_count = 0
+    for loan in recent_loans:
+        if "due_date" in loan and loan["due_date"]:
+            try:
+                due = datetime.strptime(loan["due_date"], "%Y-%m-%d")
+                if due >= datetime.now().date():
+                    good_count += 1
+            except:
+                pass
+
+    if good_count >= 2:
+        customer["current_package_id"] = next_pkg["id"]
+        customer["last_good_repayment"] = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
+        db._save_data()
+        logging.info(f"Customer {customer_id} upgraded to {next_pkg.get('name', 'Unknown')}")
+        return True
+
+    return False
 
 # ---------------------------
 # Routes
@@ -142,7 +212,7 @@ def user_dashboard():
         flash("Please login to access your dashboard", "error")
         return redirect(url_for("login"))
 
-    update_overdue_loans()  # Check & update overdue loans
+    update_overdue_loans()
 
     user_id = session['user_id']
     user_type = session['user_type']
@@ -194,6 +264,102 @@ def user_dashboard():
     session.clear()
     return redirect(url_for("login"))
 
+# ────────────────────────────────────────────────
+# NEW: Merchant Loan Packages Management
+# ────────────────────────────────────────────────
+@app.route("/merchant/packages", methods=["GET", "POST"])
+
+@app.route("/merchant_packages", methods=["GET", "POST"])
+
+# Assume db is your KopaDB Database object
+# db = Database()
+
+@app.route("/merchant/packages", methods=["GET", "POST"])
+def merchant_packages():
+    if 'user_id' not in session or session.get('user_type') != "merchant":
+        flash("Merchant login required", "error")
+        return redirect(url_for("login"))
+
+    merchant_id = session['user_id']
+
+    if request.method == "POST":
+        action = request.form.get("action")
+        pkg_id = request.form.get("package_id")
+
+        if action == "create":
+            # CREATE
+            name = request.form.get("name", "").strip()
+            try:
+                max_amount = float(request.form.get("max_amount", 0))
+                interest = float(request.form.get("interest_rate", 0))
+                days = int(request.form.get("repayment_days", 0))
+                min_risk = int(request.form.get("min_risk_score", 0))
+                level = int(request.form.get("order_level", 1))
+            except ValueError:
+                flash("Numbers must be valid", "error")
+                return redirect(url_for("merchant_packages"))
+
+            if not name or max_amount <= 0 or interest <= 0 or days <= 0:
+                flash("Fill required fields: name, max amount, interest, repayment days", "error")
+            else:
+                new_pkg = {
+                    "id": str(random.randint(100000, 999999)),
+                    "merchant_id": merchant_id,
+                    "name": name,
+                    "max_amount": max_amount,
+                    "interest_rate": interest,
+                    "repayment_days": days,
+                    "min_risk_score": min_risk,
+                    "order_level": level,
+                    "created_at": datetime.now().strftime("%Y-%m-%d %H:%M:%S")
+                }
+                db.insert("loan_packages", new_pkg)
+                db._save_data()
+                flash(f"Package '{name}' created!", "success")
+
+        elif action == "edit":
+            # EDIT
+            package = next((p for p in db.tables["loan_packages"].rows if p["id"] == pkg_id), None)
+            if not package:
+                flash("Package not found", "error")
+            else:
+                # Update only if fields exist in form
+                name = request.form.get("name")
+                if name:
+                    package["name"] = name.strip()
+                max_amount = request.form.get("max_amount")
+                if max_amount:
+                    package["max_amount"] = float(max_amount)
+                interest = request.form.get("interest_rate")
+                if interest:
+                    package["interest_rate"] = float(interest)
+                days = request.form.get("repayment_days")
+                if days:
+                    package["repayment_days"] = int(days)
+                min_risk = request.form.get("min_risk_score")
+                if min_risk:
+                    package["min_risk_score"] = int(min_risk)
+                level = request.form.get("order_level")
+                if level:
+                    package["order_level"] = int(level)
+                db._save_data()
+                flash(f"Package '{package['name']}' updated!", "success")
+
+        elif action == "delete":
+            # DELETE
+            db.tables["loan_packages"].rows = [
+                p for p in db.tables["loan_packages"].rows if p["id"] != pkg_id
+            ]
+            db._save_data()
+            flash("Package deleted successfully!", "success")
+
+    # GET: fetch all packages
+    packages = [p for p in db.tables["loan_packages"].rows if p["merchant_id"] == merchant_id]
+    packages.sort(key=lambda x: x.get("order_level", 999))
+
+    return render_template("merchant_packages.html", packages=packages, user_name=session.get('user_name'))
+
+
 @app.route("/register_merchant", methods=["GET", "POST"])
 def register_merchant():
     if request.method == "POST":
@@ -243,7 +409,6 @@ def register_customer():
             password_hash = hashlib.sha256(password.encode()).hexdigest()
             created_at = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
 
-            # Risk scoring
             credit_score = random.randint(300, 850)
             late_payments = random.uniform(0, 0.6)
             risk_score = 0
@@ -259,7 +424,9 @@ def register_customer():
                 "password_hash": password_hash,
                 "created_at": created_at,
                 "risk_score": risk_score,
-                "wallet_balance": 0.0
+                "wallet_balance": 0.0,
+                "current_package_id": None,
+                "last_good_repayment": None
             }
 
             db.insert("customers", customer)
@@ -280,12 +447,20 @@ def register_customer():
     return render_template("register_customer.html")
 
 @app.route("/request_loan/<merchant_id>", methods=["GET", "POST"])
+
+
+@app.route("/customer/request_loan/<merchant_id>", methods=["GET", "POST"])
+
+
 def request_loan(merchant_id):
-    if 'user_id' not in session or session['user_type'] != "customer":
+    # Ensure customer is logged in
+    if 'user_id' not in session or session.get('user_type') != "customer":
         flash("Please login as customer", "error")
         return redirect(url_for("login"))
 
     customer_id = session['user_id']
+
+    # Fetch customer and merchant
     customer = next((c for c in db.tables["customers"].rows if c["id"] == customer_id), None)
     merchant = next((m for m in db.tables["merchants"].rows if m["id"] == merchant_id), None)
 
@@ -293,17 +468,80 @@ def request_loan(merchant_id):
         flash("Invalid request", "error")
         return redirect(url_for("user_dashboard"))
 
+    # Ensure numeric fields for customer
+    try:
+        customer["risk_score"] = int(customer.get("risk_score", 0))
+        customer["current_package_id"] = customer.get("current_package_id")  # keep as is
+    except (ValueError, TypeError):
+        customer["risk_score"] = 0
+
+    # Ensure merchant balance is float
+    try:
+        merchant["balance"] = float(merchant.get("balance", 0))
+    except (ValueError, TypeError):
+        merchant["balance"] = 0.0
+
+    # Get merchant packages
+    packages = [p for p in db.tables["loan_packages"].rows if p["merchant_id"] == merchant_id]
+
+    # Sort and ensure numeric fields
+    for pkg in packages:
+        try:
+            pkg["max_amount"] = float(pkg.get("max_amount", 0))
+            pkg["interest_rate"] = float(pkg.get("interest_rate", 0))
+            pkg["repayment_days"] = int(pkg.get("repayment_days", 0))
+            pkg["min_risk_score"] = int(pkg.get("min_risk_score", 0))
+            pkg["order_level"] = int(pkg.get("order_level", 1))
+        except (ValueError, TypeError):
+            pkg["max_amount"] = 0.0
+            pkg["interest_rate"] = 0.0
+            pkg["repayment_days"] = 0
+            pkg["min_risk_score"] = 0
+            pkg["order_level"] = 1
+
+    packages.sort(key=lambda x: x.get("order_level", 999))
+
     if request.method == "POST":
         try:
             amount = float(request.form["amount"])
-            if amount <= 0 or amount > merchant["balance"]:
-                flash("Invalid amount", "error")
+            if amount <= 0:
+                flash("Amount must be positive", "error")
                 return redirect(request.url)
 
-            interest_rate = random.uniform(5, 25)
-            repayment_days = 30
+            # Determine current package
+            pkg = None
+            current_pkg_id = customer.get("current_package_id")
+
+            if current_pkg_id:
+                pkg = next((p for p in packages if p["id"] == current_pkg_id), None)
+
+            if not pkg and packages:
+                pkg = min(packages, key=lambda x: x.get("order_level", 999))
+                customer["current_package_id"] = pkg["id"]
+                db._save_data()
+                flash("You've been placed in the Starter package.", "info")
+
+            # Set constraints
+            if pkg:
+                max_allowed = pkg["max_amount"]
+                interest_rate = pkg["interest_rate"]
+                repayment_days = pkg["repayment_days"]
+            else:
+                max_allowed = 20000.0
+                interest_rate = 18.0
+                repayment_days = 30
+
+            if amount > max_allowed:
+                flash(f"Your current package allows max KES {max_allowed:,.0f}", "error")
+                return redirect(request.url)
+
+            if amount > merchant["balance"]:
+                flash("Merchant has insufficient balance", "error")
+                return redirect(request.url)
+
             due_date = (datetime.now() + timedelta(days=repayment_days)).strftime("%Y-%m-%d")
 
+            # Save transaction
             loan_id = str(random.randint(100000, 999999))
             transaction = {
                 "id": loan_id,
@@ -321,14 +559,22 @@ def request_loan(merchant_id):
             db.insert("transactions", transaction)
             db._save_data()
 
-            flash(f"Loan request of ${amount:.2f} sent!", "success")
+            flash(f"Loan request of KES {amount:,.2f} sent!", "success")
             return redirect(url_for("user_dashboard"))
 
         except ValueError as e:
             flash(f"Invalid amount: {str(e)}", "error")
+            return redirect(request.url)
 
-    return render_template("request_loan.html", merchant=merchant, customer=customer)
+    return render_template(
+        "request_loan.html",
+        merchant=merchant,
+        customer=customer,
+        packages=packages,
+        default_interest=18  # fallback interest
+    )
 
+# The rest of your routes remain unchanged
 @app.route("/merchant_loans")
 def merchant_loans():
     if 'user_id' not in session or session['user_type'] != "merchant":
@@ -403,7 +649,7 @@ def add_transaction():
         flash("Please login first", "error")
         return redirect(url_for("login"))
 
-    id = str(random.randint(100000, 999999))
+    tid = str(random.randint(100000, 999999))
     merchant_id = request.form["merchant_id"]
     customer_id = request.form["customer_id"]
 
@@ -424,14 +670,14 @@ def add_transaction():
     fraud_flag = "Yes" if amount > 10000 else "No"
 
     transaction = {
-        "id": id,
+        "id": tid,
         "merchant_id": merchant_id,
         "customer_id": customer_id,
         "amount": amount,
         "status": status,
         "timestamp": datetime.now().strftime("%Y-%m-%d %H:%M:%S"),
         "fraud_flag": fraud_flag,
-        "due_date": None  # Not applicable for manual transactions
+        "due_date": None
     }
 
     try:

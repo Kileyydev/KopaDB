@@ -1,111 +1,188 @@
 {
   "merchants": {
-    "columns": [
-      "id",
-      "name",
-      "email",
-      "password_hash",
-      "balance",
-      "created_at"
-    ],
+    "schema": {
+      "id": "TEXT",
+      "name": "TEXT",
+      "email": "TEXT",
+      "password_hash": "TEXT",
+      "balance": "TEXT",
+      "created_at": "TEXT"
+    },
     "rows": [
       {
         "id": "1",
         "name": "Pesapal",
         "email": "pesapal@example.com",
         "password_hash": "ef92b778bafe771e89245b89ecbc08a44a4e166c06659911881f383d4473e94f",
-        "balance": 1000000,
-        "created_at": "2026-01-14 12:37:05"
+        "balance": "1000000.0",
+        "created_at": "2026-01-16 13:53:40"
       },
       {
-        "id": "2522",
-        "name": "Acme Traders",
-        "email": "kim@123.edu",
+        "id": "3519",
+        "name": "Tea Leaves",
+        "email": "kim@gmail.com",
         "password_hash": "42324f50a82b985bf0b51d52702c88e75128c179f246c95ae7fcd338c2153354",
-        "balance": 999101.0,
-        "created_at": "2026-01-14 12:48:54"
+        "balance": "1000000.0",
+        "created_at": "2026-01-16 14:22:38"
+      },
+      {
+        "id": "8696",
+        "name": "Tasha Kiley",
+        "email": "imkiy03@gmail.com",
+        "password_hash": "42324f50a82b985bf0b51d52702c88e75128c179f246c95ae7fcd338c2153354",
+        "balance": "1000000.0",
+        "created_at": "2026-01-16 14:28:46"
+      },
+      {
+        "id": "1752",
+        "name": "Acme Traders",
+        "email": "acme@gmail.com",
+        "password_hash": "42324f50a82b985bf0b51d52702c88e75128c179f246c95ae7fcd338c2153354",
+        "balance": "1000000.0",
+        "created_at": "2026-01-16 14:30:32"
       }
     ],
     "primary_key": "id",
     "unique_keys": [],
-    "indexes": {}
+    "indexes": []
   },
   "customers": {
-    "columns": [
-      "id",
-      "name",
-      "email",
-      "password_hash",
-      "created_at"
-    ],
+    "schema": {
+      "id": "TEXT",
+      "name": "TEXT",
+      "email": "TEXT",
+      "password_hash": "TEXT",
+      "created_at": "TEXT",
+      "risk_score": "TEXT",
+      "wallet_balance": "TEXT",
+      "current_package_id": "TEXT",
+      "last_good_repayment": "TEXT"
+    },
     "rows": [
       {
         "id": "1",
         "name": "Ivy",
         "email": "ivy@example.com",
         "password_hash": "ef92b778bafe771e89245b89ecbc08a44a4e166c06659911881f383d4473e94f",
-        "created_at": "2026-01-14 12:37:05"
+        "created_at": "2026-01-16 13:53:40",
+        "risk_score": "0",
+        "wallet_balance": "0.0",
+        "current_package_id": null,
+        "last_good_repayment": null
       },
       {
-        "id": "6258",
-        "name": "Coffee",
+        "id": "3872",
+        "name": "Mangoes",
         "email": "imkiy03@gmail.com",
         "password_hash": "42324f50a82b985bf0b51d52702c88e75128c179f246c95ae7fcd338c2153354",
-        "created_at": "2026-01-14 12:37:17"
+        "created_at": "2026-01-16 14:21:53",
+        "risk_score": "2",
+        "wallet_balance": "0.0",
+        "current_package_id": null,
+        "last_good_repayment": null
+      },
+      {
+        "id": "8424",
+        "name": "Kiley",
+        "email": "imkiy03@gmail.com",
+        "password_hash": "42324f50a82b985bf0b51d52702c88e75128c179f246c95ae7fcd338c2153354",
+        "created_at": "2026-01-16 14:29:06",
+        "risk_score": "2",
+        "wallet_balance": "0.0",
+        "current_package_id": null,
+        "last_good_repayment": null
+      },
+      {
+        "id": "8430",
+        "name": "Tasha Kiley",
+        "email": "imkiy03@gmail.com",
+        "password_hash": "42324f50a82b985bf0b51d52702c88e75128c179f246c95ae7fcd338c2153354",
+        "created_at": "2026-01-16 15:19:46",
+        "risk_score": "2",
+        "wallet_balance": "0.0",
+        "current_package_id": null,
+        "last_good_repayment": null
       }
     ],
     "primary_key": "id",
     "unique_keys": [],
-    "indexes": {}
+    "indexes": []
   },
   "transactions": {
-    "columns": [
-      "id",
-      "merchant_id",
-      "customer_id",
-      "amount",
-      "status",
-      "timestamp",
-      "fraud_flag"
-    ],
+    "schema": {
+      "id": "TEXT",
+      "merchant_id": "TEXT",
+      "customer_id": "TEXT",
+      "amount": "TEXT",
+      "interest_rate": "TEXT",
+      "repayment_days": "TEXT",
+      "status": "TEXT",
+      "timestamp": "TEXT",
+      "fraud_flag": "TEXT",
+      "due_date": "TEXT"
+    },
+    "rows": [],
+    "primary_key": "id",
+    "unique_keys": [],
+    "indexes": []
+  },
+  "loan_packages": {
+    "schema": {
+      "id": "TEXT",
+      "merchant_id": "TEXT",
+      "name": "TEXT",
+      "max_amount": "TEXT",
+      "interest_rate": "TEXT",
+      "repayment_days": "TEXT",
+      "min_risk_score": "TEXT",
+      "order_level": "TEXT",
+      "created_at": "TEXT"
+    },
     "rows": [
       {
-        "id": "940340",
-        "merchant_id": "1",
-        "customer_id": "6258",
-        "amount": 900000.0,
-        "status": "pending",
-        "timestamp": "2026-01-14 12:47:54",
-        "fraud_flag": "Risk Score: N/A",
-        "merchant_name": "Pesapal"
+        "id": "810607",
+        "merchant_id": "1752",
+        "name": "Silver",
+        "max_amount": "9000.0",
+        "interest_rate": "14.0",
+        "repayment_days": "30",
+        "min_risk_score": "8",
+        "order_level": "1",
+        "created_at": "2026-01-16 14:40:47"
       },
       {
-        "id": "577554",
-        "merchant_id": "2522",
-        "customer_id": "6258",
-        "amount": 899.0,
-        "status": "accepted",
-        "timestamp": "2026-01-14 12:49:19",
-        "fraud_flag": "Approved",
-        "customer_name": "Coffee",
-        "risk_score": "N/A",
-        "merchant_name": "Acme Traders"
-      },
-      {
-        "id": "731496",
-        "merchant_id": "2522",
-        "customer_id": "6258",
-        "amount": 8000.0,
-        "status": "failed",
-        "timestamp": "2026-01-14 15:34:05",
-        "fraud_flag": "Rejected",
-        "merchant_name": "Acme Traders",
-        "customer_name": "Coffee",
-        "risk_score": "N/A"
+        "id": "121495",
+        "merchant_id": "1752",
+        "name": "Gold",
+        "max_amount": "50000.0",
+        "interest_rate": "13.0",
+        "repayment_days": "60",
+        "min_risk_score": "4",
+        "order_level": "2",
+        "created_at": "2026-01-16 14:50:55"
       }
     ],
     "primary_key": "id",
     "unique_keys": [],
-    "indexes": {}
+    "indexes": []
+  },
+  "users": {
+    "schema": {
+      "id": "INT",
+      "email": "TEXT"
+    },
+    "rows": [
+      {
+        "id": 2,
+        "email": "new@mail.com"
+      },
+      {
+        "id": 1,
+        "email": "alice@example.com"
+      }
+    ],
+    "primary_key": "id",
+    "unique_keys": [],
+    "indexes": []
   }
 }
