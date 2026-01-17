@@ -452,6 +452,7 @@ def register_customer():
 @app.route("/customer/request_loan/<merchant_id>", methods=["GET", "POST"])
 
 
+
 def request_loan(merchant_id):
     # Ensure customer is logged in
     if 'user_id' not in session or session.get('user_type') != "customer":
@@ -471,7 +472,6 @@ def request_loan(merchant_id):
     # Ensure numeric fields for customer
     try:
         customer["risk_score"] = int(customer.get("risk_score", 0))
-        customer["current_package_id"] = customer.get("current_package_id")  # keep as is
     except (ValueError, TypeError):
         customer["risk_score"] = 0
 
@@ -484,7 +484,7 @@ def request_loan(merchant_id):
     # Get merchant packages
     packages = [p for p in db.tables["loan_packages"].rows if p["merchant_id"] == merchant_id]
 
-    # Sort and ensure numeric fields
+    # Sort and ensure numeric fields for packages
     for pkg in packages:
         try:
             pkg["max_amount"] = float(pkg.get("max_amount", 0))
@@ -508,31 +508,25 @@ def request_loan(merchant_id):
                 flash("Amount must be positive", "error")
                 return redirect(request.url)
 
-            # Determine current package
-            pkg = None
-            current_pkg_id = customer.get("current_package_id")
+            # Get the selected package from form
+            selected_pkg_id = request.form.get("package_id")
+            pkg = next((p for p in packages if p["id"] == selected_pkg_id), None)
 
-            if current_pkg_id:
-                pkg = next((p for p in packages if p["id"] == current_pkg_id), None)
+            if not pkg:
+                flash("Invalid package selected", "error")
+                return redirect(request.url)
 
-            if not pkg and packages:
-                pkg = min(packages, key=lambda x: x.get("order_level", 999))
-                customer["current_package_id"] = pkg["id"]
-                db._save_data()
-                flash("You've been placed in the Starter package.", "info")
+            # Check if customer is eligible based on risk score (lower is better)
+            if customer["risk_score"] > pkg["min_risk_score"]:
+                flash(f"Your risk score ({customer['risk_score']}) is too high for this package", "error")
+                return redirect(request.url)
 
-            # Set constraints
-            if pkg:
-                max_allowed = pkg["max_amount"]
-                interest_rate = pkg["interest_rate"]
-                repayment_days = pkg["repayment_days"]
-            else:
-                max_allowed = 20000.0
-                interest_rate = 18.0
-                repayment_days = 30
+            max_allowed = pkg["max_amount"]
+            interest_rate = pkg["interest_rate"]
+            repayment_days = pkg["repayment_days"]
 
             if amount > max_allowed:
-                flash(f"Your current package allows max KES {max_allowed:,.0f}", "error")
+                flash(f"Your selected package allows max KES {max_allowed:,.0f}", "error")
                 return redirect(request.url)
 
             if amount > merchant["balance"]:
@@ -547,6 +541,7 @@ def request_loan(merchant_id):
                 "id": loan_id,
                 "merchant_id": merchant_id,
                 "customer_id": customer_id,
+                "package_id": pkg["id"],
                 "amount": amount,
                 "interest_rate": interest_rate,
                 "repayment_days": repayment_days,
@@ -559,7 +554,7 @@ def request_loan(merchant_id):
             db.insert("transactions", transaction)
             db._save_data()
 
-            flash(f"Loan request of KES {amount:,.2f} sent!", "success")
+            flash(f"Loan request of KES {amount:,.2f} sent using package '{pkg['name']}'!", "success")
             return redirect(url_for("user_dashboard"))
 
         except ValueError as e:

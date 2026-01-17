@@ -135,7 +135,8 @@
         <div class="text-right">
           <p class="text-sm text-slate-400">Total Borrowed</p>
           <p class="text-xl font-bold text-accent">
-            ${{ "%.2f"|format((transactions|map(attribute="amount")|sum|float|default(0))) }}
+            ${{ "%.2f"|format(transactions | map(attribute="amount") | map('float') | sum) }}
+
           </p>
         </div>
       </div>

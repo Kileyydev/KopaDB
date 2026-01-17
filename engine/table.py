@@ -1,7 +1,6 @@
 import datetime
 from engine.index import Index
 
-# ... imports same ...
 
 class Table:
     SUPPORTED_TYPES = {"INT", "FLOAT", "TEXT", "TIMESTAMP"}
@@ -13,40 +12,49 @@ class Table:
 
         for col in columns:
             if isinstance(col, tuple):
-                name, dtype = col
+                col_name, dtype = col
                 dtype = dtype.upper()
                 if dtype not in self.SUPPORTED_TYPES:
                     raise ValueError(f"Unsupported type: {dtype}")
-                self.schema[name] = dtype
+                self.schema[col_name] = dtype
+                self.columns.append(col_name)
             else:
                 self.schema[col] = "TEXT"
-            self.columns.append(name if isinstance(col, tuple) else col)
+                self.columns.append(col)
 
         self.primary_key = primary_key
         self.unique_keys = unique_keys or []
         self.rows = []
-        self.indexes = {}  # column → Index
+        self.indexes = {}  # column -> Index
 
+    # ---------------- INTERNAL ----------------
     def _cast(self, column, value):
         if value is None:
             return None
+
         dtype = self.schema.get(column)
         if not dtype:
             return value
 
         try:
-            if dtype == "INT":     return int(value)
-            if dtype == "FLOAT":   return float(value)
-            if dtype == "TEXT":    return str(value)
+            if dtype == "INT":
+                return int(value)
+            if dtype == "FLOAT":
+                return float(value)
+            if dtype == "TEXT":
+                return str(value)
             if dtype == "TIMESTAMP":
                 if isinstance(value, datetime.datetime):
                     return value.isoformat()
                 return str(value)
         except (ValueError, TypeError):
-            raise ValueError(f"Cannot cast {value!r} to {dtype} for column {column}")
+            raise ValueError(
+                f"Cannot cast {value!r} to {dtype} for column '{column}'"
+            )
 
         return value
 
+    # ---------------- INSERT ----------------
     def insert(self, row):
         new_row = {}
 
@@ -58,19 +66,23 @@ class Table:
             else:
                 new_row[col] = None
 
-        # PK check
+        # Primary key constraint
         if self.primary_key:
             pk_val = new_row[self.primary_key]
             for r in self.rows:
                 if r[self.primary_key] == pk_val:
-                    raise ValueError(f"Primary key violation on {self.primary_key} = {pk_val}")
+                    raise ValueError(
+                        f"Primary key violation on {self.primary_key} = {pk_val}"
+                    )
 
-        # Unique checks
+        # Unique constraints
         for uk in self.unique_keys:
             uk_val = new_row[uk]
             for r in self.rows:
                 if r[uk] == uk_val:
-                    raise ValueError(f"Unique constraint violation on {uk} = {uk_val}")
+                    raise ValueError(
+                        f"Unique constraint violation on {uk} = {uk_val}"
+                    )
 
         self.rows.append(new_row)
 
@@ -80,31 +92,14 @@ class Table:
 
         return new_row
 
-def create_index(self, column):
-    """
-    Create and attach a new index on the given column.
-    Automatically rebuilds it using current table rows.
-    """
-    if column not in self.schema:
-        raise ValueError(f"Column '{column}' does not exist in table '{self.name}'")
-    
-    if column in self.indexes:
-        print(f"→ Index on '{column}' already exists (skipping)")
-        return
-    
-    idx = Index(column)                     # ← Index is created here
-    self.indexes[column] = idx
-    idx.rebuild(self.rows)                  # ← rebuilds/populates the index
-    print(f"→ Index created on column '{column}' ({len(self.rows)} rows indexed)")
-    
-    
+    # ---------------- SELECT ----------------
     def select_all(self, filters=None):
         if not filters:
             return list(self.rows)
 
-        result = self.rows[:]
+        result = self.rows
 
-        for col, want in filters.items():
+        for col, want in filters:
             want = self._cast(col, want)
 
             if col in self.indexes:
@@ -112,14 +107,15 @@ def create_index(self, column):
             else:
                 result = [r for r in result if r.get(col) == want]
 
-        return result
+        return list(result)
 
+    # ---------------- UPDATE ----------------
     def update(self, filters, updates):
         rows = self.select_all(filters)
         count = len(rows)
 
         for row in rows:
-            # Remove from old indexes
+            # Remove from indexes
             for col, idx in self.indexes.items():
                 idx.remove(row[col], row)
 
@@ -136,6 +132,7 @@ def create_index(self, column):
 
         return count
 
+    # ---------------- DELETE ----------------
     def delete(self, filters):
         to_delete = self.select_all(filters)
         count = len(to_delete)
@@ -146,3 +143,27 @@ def create_index(self, column):
             self.rows.remove(row)
 
         return count
+
+    # ---------------- INDEX ----------------
+    def create_index(self, column):
+        """
+        Create and attach a new index on the given column.
+        Automatically rebuilds it using current table rows.
+        """
+        if column not in self.schema:
+            raise ValueError(
+                f"Column '{column}' does not exist in table '{self.name}'"
+            )
+
+        if column in self.indexes:
+            print(f"→ Index on '{column}' already exists (skipping)")
+            return
+
+        idx = Index(column)
+        idx.rebuild(self.rows)
+        self.indexes[column] = idx
+
+        print(
+            f"→ Index created on column '{column}' "
+            f"({len(self.rows)} rows indexed)"
+        )

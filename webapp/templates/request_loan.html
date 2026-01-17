@@ -93,89 +93,10 @@
       </div>
     </div>
 
-    <!-- === Loan Packages Section === -->
-    <section class="mb-12">
-      <h2 class="text-2xl font-display font-semibold mb-6 text-center md:text-left">
-        Available Packages from {{ merchant.name }}
-      </h2>
-
-      {% if packages %}
-        <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-          {% for pkg in packages %}
-            {% set is_current = (customer.current_package_id == pkg.id) %}
-            {% set can_use = (customer.risk_score|int <= pkg.min_risk_score|int) %}
-
-            <div class="rounded-2xl border-2 shadow-lg overflow-hidden transition-all duration-300
-              {% if is_current %} border-accent bg-accent/10 ring-2 ring-accent/30
-              {% elif can_use %} border-kopa/70 bg-neutral-light/70 hover:border-kopa hover:shadow-kopa/20
-              {% else %} border-slate-700 bg-neutral-light/40 opacity-80
-              {% endif %}">
-
-              <div class="p-6">
-                <div class="flex justify-between items-start mb-4">
-                  <h3 class="text-xl font-bold {{ 'text-accent' if is_current else 'text-kopa' }}">
-                    {{ pkg.name }}
-                  </h3>
-                  <div class="flex flex-col items-end gap-1">
-                    {% if is_current %}
-                      <span class="text-xs px-3 py-1 bg-accent/30 text-accent rounded-full font-medium">
-                        Current
-                      </span>
-                    {% elif can_use %}
-                      <span class="text-xs px-3 py-1 bg-kopa/30 text-kopa rounded-full font-medium">
-                        Available
-                      </span>
-                    {% else %}
-                      <span class="text-xs px-3 py-1 bg-slate-700 text-slate-300 rounded-full">
-                        Locked
-                      </span>
-                    {% endif %}
-                    <span class="text-xs text-slate-400">Tier {{ pkg.order_level }}</span>
-                  </div>
-                </div>
-
-                <div class="space-y-2.5 text-sm">
-                  <p><strong>Max loan:</strong> ${{ "%.0f"|format(pkg.max_amount|float) }}</p>
-                  <p><strong>Interest:</strong> {{ pkg.interest_rate|float }}%</p>
-                  <p><strong>Repayment:</strong> {{ pkg.repayment_days|int }} days</p>
-                  <p><strong>Min risk score:</strong> 
-                    <span class="{{ 'text-danger font-medium' if customer.risk_score|int > pkg.min_risk_score|int else 'text-accent' }}">
-                      ≤ {{ pkg.min_risk_score }}
-                    </span>
-                  </p>
-                </div>
-              </div>
-
-              {% if not can_use %}
-                <div class="bg-slate-900/50 px-6 py-3 text-xs text-center text-slate-400 border-t border-slate-700">
-                  Improve repayments to unlock (need risk score ≤ {{ pkg.min_risk_score }})
-                </div>
-              {% elif not is_current %}
-                <div class="bg-kopa/10 px-6 py-3 text-xs text-center text-kopa border-t border-kopa/30">
-                  Good option — consider upgrading soon
-                </div>
-              {% endif %}
-            </div>
-          {% endfor %}
-        </div>
-
-        <p class="text-center text-sm text-slate-500 mt-8">
-          Your current package determines the interest rate and max amount for this request.
-        </p>
-
-      {% else %}
-        <div class="bg-neutral-light/50 border border-slate-700 rounded-2xl p-10 text-center text-slate-400 shadow-lg">
-          <svg class="w-16 h-16 mx-auto mb-6 opacity-60" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"/>
-          </svg>
-          <p class="text-lg font-medium">No custom packages yet</p>
-          <p class="mt-2">Default rates ({{ default_interest|default('18') }}% interest, 30 days) will apply.</p>
-        </div>
-      {% endif %}
-    </section>
-
-    <!-- Loan Request Form -->
+    <!-- === Loan Request Form === -->
     <form method="POST" class="bg-neutral-light/80 backdrop-blur-sm border border-slate-700 rounded-2xl p-8 shadow-xl">
+      
+      <!-- Loan Amount -->
       <div class="mb-8">
         <label for="amount" class="block text-sm font-medium text-slate-300 mb-3">
           How much do you need? (USD)
@@ -194,8 +115,26 @@
           />
         </div>
         <p class="mt-4 text-sm text-slate-400">
-          Max amount depends on your current package • Merchant has ${{ "%.2f"|format(merchant.balance|float) }} available
+          Max amount depends on your selected package • Merchant has ${{ "%.2f"|format(merchant.balance|float) }} available
         </p>
+      </div>
+
+      <!-- Package Selection -->
+      <div class="mb-8">
+        <h2 class="text-lg font-semibold mb-3">Select Package</h2>
+        <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+          {% for pkg in packages %}
+            {% set can_use = (customer.risk_score|int <= pkg.min_risk_score|int) %}
+            <label class="flex items-center p-4 rounded-xl border cursor-pointer transition 
+              {% if can_use %}border-kopa hover:border-accent bg-neutral-light/70{% else %}border-slate-700 bg-neutral-light/50 opacity-60 cursor-not-allowed{% endif %}">
+              <input type="radio" name="package_id" value="{{ pkg.id }}" class="mr-3" {% if not can_use %}disabled{% endif %} {% if customer.current_package_id == pkg.id %}checked{% endif %}>
+              <div>
+                <p class="font-medium text-white">{{ pkg.name }} (Tier {{ pkg.order_level }})</p>
+                <p class="text-sm text-slate-400">Max: ${{ "%.0f"|format(pkg.max_amount|float) }}, Interest: {{ pkg.interest_rate|float }}%, Repay: {{ pkg.repayment_days }} days</p>
+              </div>
+            </label>
+          {% endfor %}
+        </div>
       </div>
 
       <button 

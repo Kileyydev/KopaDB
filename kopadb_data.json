@@ -38,8 +38,16 @@
         "name": "Acme Traders",
         "email": "acme@gmail.com",
         "password_hash": "42324f50a82b985bf0b51d52702c88e75128c179f246c95ae7fcd338c2153354",
-        "balance": "1000000.0",
+        "balance": 999100.0,
         "created_at": "2026-01-16 14:30:32"
+      },
+      {
+        "id": "1024",
+        "name": "Tea Leaves",
+        "email": "imkiy03@gmail.com",
+        "password_hash": "42324f50a82b985bf0b51d52702c88e75128c179f246c95ae7fcd338c2153354",
+        "balance": 1000000.0,
+        "created_at": "2026-01-16 21:56:23"
       }
     ],
     "primary_key": "id",
@@ -98,7 +106,18 @@
         "email": "imkiy03@gmail.com",
         "password_hash": "42324f50a82b985bf0b51d52702c88e75128c179f246c95ae7fcd338c2153354",
         "created_at": "2026-01-16 15:19:46",
-        "risk_score": "2",
+        "risk_score": 2,
+        "wallet_balance": 900.0,
+        "current_package_id": null,
+        "last_good_repayment": null
+      },
+      {
+        "id": "3902",
+        "name": "Mangoes",
+        "email": "kim@123.edu",
+        "password_hash": "42324f50a82b985bf0b51d52702c88e75128c179f246c95ae7fcd338c2153354",
+        "created_at": "2026-01-16 21:56:56",
+        "risk_score": 2,
         "wallet_balance": "0.0",
         "current_package_id": null,
         "last_good_repayment": null
@@ -121,7 +140,38 @@
       "fraud_flag": "TEXT",
       "due_date": "TEXT"
     },
-    "rows": [],
+    "rows": [
+      {
+        "id": "878222",
+        "merchant_id": "1752",
+        "customer_id": "8430",
+        "amount": "900.0",
+        "interest_rate": "14.0",
+        "repayment_days": "30",
+        "status": "accepted",
+        "timestamp": "2026-01-16 16:01:17",
+        "fraud_flag": "Approved",
+        "due_date": "2026-02-15",
+        "merchant_name": "Acme Traders",
+        "customer_name": "Tasha Kiley",
+        "risk_score": 2
+      },
+      {
+        "id": "565494",
+        "merchant_id": "1752",
+        "customer_id": "3902",
+        "amount": "9000.0",
+        "interest_rate": "14.0",
+        "repayment_days": "30",
+        "status": "failed",
+        "timestamp": "2026-01-16 21:57:28",
+        "fraud_flag": "Rejected",
+        "due_date": "2026-02-15",
+        "merchant_name": "Acme Traders",
+        "customer_name": "Mangoes",
+        "risk_score": 2
+      }
+    ],
     "primary_key": "id",
     "unique_keys": [],
     "indexes": []
@@ -143,22 +193,22 @@
         "id": "810607",
         "merchant_id": "1752",
         "name": "Silver",
-        "max_amount": "9000.0",
-        "interest_rate": "14.0",
-        "repayment_days": "30",
-        "min_risk_score": "8",
-        "order_level": "1",
+        "max_amount": 9000.0,
+        "interest_rate": 14.0,
+        "repayment_days": 30,
+        "min_risk_score": 8,
+        "order_level": 1,
         "created_at": "2026-01-16 14:40:47"
       },
       {
         "id": "121495",
         "merchant_id": "1752",
         "name": "Gold",
-        "max_amount": "50000.0",
-        "interest_rate": "13.0",
-        "repayment_days": "60",
-        "min_risk_score": "4",
-        "order_level": "2",
+        "max_amount": 50000.0,
+        "interest_rate": 13.0,
+        "repayment_days": 60,
+        "min_risk_score": 4,
+        "order_level": 2,
         "created_at": "2026-01-16 14:50:55"
       }
     ],
@@ -179,6 +229,28 @@
       {
         "id": 1,
         "email": "alice@example.com"
+      }
+    ],
+    "primary_key": "id",
+    "unique_keys": [],
+    "indexes": []
+  },
+  "manager": {
+    "schema": {
+      "id": "INT",
+      "name": "TEXT",
+      "department": "TEXT"
+    },
+    "rows": [
+      {
+        "id": 1,
+        "name": "Ivy",
+        "department": "Engineering"
+      },
+      {
+        "id": 3,
+        "name": "Mary",
+        "department": "Product"
       }
     ],
     "primary_key": "id",

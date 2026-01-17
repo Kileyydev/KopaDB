@@ -88,7 +88,7 @@
       <div class="bg-neutral-light border border-slate-800 rounded-xl p-6 shadow-lg hover:border-accent/50 transition-all">
         <p class="text-sm text-slate-400 mb-1">Total Lent</p>
         <p class="text-3xl font-display font-bold text-white">
-          ${{ "%.2f"|format(transactions|map(attribute="amount")|sum|float) }}
+          ${{ "%.2f"|format(transactions|map(attribute="amount")|map('float')|sum) }}
         </p>
         <p class="text-xs text-accent mt-2">All time</p>
       </div>
